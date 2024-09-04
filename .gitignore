@@ -1,4 +1,4 @@
 /.vscode
 /build.zig.zon
-/zig-cache
+/.zig-cache
 /zig-out
