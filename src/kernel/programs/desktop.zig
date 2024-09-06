@@ -4,7 +4,8 @@ const os = @import("../OS/os.zig");
 const dbg = @import("../IO/debug.zig");
 
 pub fn init() void {
-    // task_manager.create_task("Desktop", _main);
+    dbg.printf("The entry point of this process is ${X}!\r\n", .{@intFromPtr(&_main)});
+    task_manager.create_task("Desktop", _main);
 }
 
 pub fn _main() void {

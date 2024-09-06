@@ -261,15 +261,7 @@ fn get_or_create_root_table() !Table(entries.PML45E) {
 }
 
 pub fn load_pgtbl() void {
-    var cr0 = ctrl_registers.read(.cr0);
-
-    cr0.pg = true;
-    cr0.pe = true;
-
     ctrl_registers.write(.cr3, cr3_new);
-    ctrl_registers.write(.cr0, cr0);
-
-    while (true) {}
 }
 
 pub fn finalize_and_fix_root() void {

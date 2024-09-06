@@ -19,6 +19,7 @@ pub const PML45E = packed struct(u64) {
     pcd: bool,
     accessed: bool,
     _ignored1: u6 = 0,
+    /// prefer using get/set_phys_addr to access the physical address
     physaddr: u40,
     meta: PageMeta,
     _ignored2: u4 = 0,
@@ -44,6 +45,8 @@ pub const PDPTE = packed struct(u64) {
     page_size: bool,
     global: bool,
     _ignored1: u3 = 0,
+    /// prefer using get_phys_addr to access the actual physical address.
+    /// union will be gb_page if and only if page_size is true
     physaddr: packed union {
         gb_page: packed struct(u51) {
             pat: bool,
@@ -140,7 +143,7 @@ pub const PTE = packed struct(u64) {
     protection_key: u4, // may be ignored if disabled
     xd: bool,
 
-    const physaddr_mask = makeTruncMask(PTE, "physaddr");
+    const physaddr_mask = makeTruncMask(PTE, .physaddr);
     pub fn get_phys_addr(self: PTE) u64 {
         return @as(u64, @bitCast(self)) & physaddr_mask;
     }

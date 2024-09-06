@@ -36,8 +36,9 @@ pub fn handle_divide_by_zero(_: *InterruptFrame) void {
 
 pub fn handle_invalid_opcode(_: *InterruptFrame) void {
 
-    puts("Invalid OpCode!\r\n");
-
+    puts("Invalid OpCode! halting!\r\n");
+    asm volatile ("hlt");
+    
 }
 
 fn handle_timer_interrupt(_: *InterruptFrame) void {

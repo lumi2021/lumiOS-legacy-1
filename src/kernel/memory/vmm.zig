@@ -20,10 +20,13 @@ pub fn init(memmap: []MemoryMapEntry) !void {
 
     dbg.printf("mapping all phys mem at 0x{X}\r\n", .{@as(usize, @bitCast(idmap_base))});
     phys_mapping_range_bits = if (paging.using_5_level_paging) @min(paging.features.maxphyaddr, 48) else @min(paging.features.maxphyaddr, 39);
+    
     dbg.printf("phys mapping range of {d} bits\r\n", .{phys_mapping_range_bits});
     try paging.map_range(0, idmap_base, @as(usize, 1) << phys_mapping_range_bits);
+    
     dbg.printf("mapping bottom {X} at 0x{X}\r\n", .{ pmm.kernel_size, @as(usize, @bitCast(@as(isize, -1 << 31))) });
     try paging.map_range(0, -1 << 31, pmm.kernel_size);
+
     dbg.printf("mapping bottom 4M at 0\r\n", .{});
     try paging.map_range(0, 0, 1 << 22);
 
@@ -35,6 +38,7 @@ pub fn init(memmap: []MemoryMapEntry) !void {
 
     dbg.printf("pages mapped, relocating and enlarging pmm\r\n", .{});
     pmm.enlarge_mapped_physical(memmap, idmap_base);
+    
     dbg.printf("high physical memory given to pmm\r\n", .{});
     paging.finalize_and_fix_root();
 }

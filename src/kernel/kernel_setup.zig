@@ -26,6 +26,12 @@ const task_man = @import("task_manager.zig");
 const interrupt_table = @import("interrupt_table.zig");
 
 
+const vtab = ZigAllocator.VTable {
+            .alloc = malloc,
+            .free = free,
+            .resize = reloc
+        };
+
 pub fn init_setup() void {
     
     dbg.puts("setupping GDT...\r\n");
@@ -44,8 +50,9 @@ pub fn init_setup() void {
     pmm.init(paging_feats.maxphyaddr, os.boot_info.memory_map.*);
     dbg.puts("initialized lower phys mem\r\n");
 
-    dbg.puts("setupping VMM...\r\n");
-    vmm.init(os.boot_info.memory_map.*) catch @panic("Error during VMM init!");
+    // as vmm is not working, i will disable it for now :3
+    //dbg.puts("setupping VMM...\r\n");
+    //vmm.init(os.boot_info.memory_map.*) catch @panic("Error during VMM init!");
 
     dbg.puts("setupping Allocator...\r\n");
     setup_Allocator();
@@ -60,7 +67,23 @@ pub fn init_setup() void {
 
 
 pub inline fn setup_Allocator() void {
-    
+    os.allocator = ZigAllocator {
+        .ptr = undefined,
+        .vtable = &vtab
+    };
+}
+
+fn malloc(_: *anyopaque, len: usize, _: u8, _: usize) ?[*]u8 {
+    return @as([*]u8, @ptrFromInt(pmm.alloc(len) catch 0));
+}
+fn free(_: *anyopaque, buf: []u8, _: u8, _: usize) void {
+    pmm.free(@intFromPtr(buf.ptr), buf.len);
+}
+fn reloc(_: *anyopaque, buf: []u8, _: u8, new_len: usize, _: usize) bool {
+    _ = buf;
+    _ = new_len;
+
+    return false;
 }
 
 pub inline fn setup_Task_manager() void {
