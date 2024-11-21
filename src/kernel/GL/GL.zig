@@ -9,7 +9,7 @@ pub var framebuffer_data: *boot_info_data.FrameBuffer = undefined;
 
 pub fn init(fb_data : *const boot_info_data.FrameBuffer) void {
     framebuffer_data = @constCast(fb_data);
-    frameBuffer = @as([*]volatile u32, @ptrFromInt(fb_data.base_address))[0 .. fb_data.size / 4];
+    frameBuffer = @as([*]volatile u32, @ptrCast(@alignCast(fb_data.framebuffer)))[0 .. fb_data.size];
 }
 
 pub fn clear() void {

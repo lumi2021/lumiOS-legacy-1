@@ -1,17 +1,17 @@
 const std = @import("std");
 const os = @import("../OS/os.zig");
-const dbg = @import("../IO/debug.zig");
 const laligin = @import("../utils/libalign.zig");
 const MemMapEntry = @import("../structures/BootInfo.zig").MemoryMapEntry;
 const ctrl_reg = @import("../utils/ctrl_registers.zig");
+
+const write = @import("../IO/debug.zig").write("PMM");
 
 pub var kernel_size: usize = undefined;
 
 var phys_addr_width: u8 = undefined;
 
-pub var phys_mapping_base: isize = undefined;
-var phys_mapping_base_unsigned: usize = undefined;
-var phys_mapping_limit: usize = 1 << 31;
+pub var phys_mapping_base: usize = undefined;
+pub var phys_mapping_limit: usize = 1 << 31;
 
 const pmm_sizes_global = blk: {
     var sizes: [41]usize = [_]usize{0} ** 41;
@@ -26,58 +26,47 @@ export var free_roots = [_]usize{0} ** pmm_sizes_global.len;
 pub var max_phys_mem: usize = 0;
 const log = std.log.scoped(.pmm);
 
-pub fn init(paddrwidth: u8, memmap: []MemMapEntry) void {
-    phys_mapping_base_unsigned = @intFromPtr(@extern(*u64, .{ .name = "__base__" }));
-    phys_mapping_base = @bitCast(phys_mapping_base_unsigned);
-    dbg.printf("initial physical mapping base 0x{X}\r\n", .{phys_mapping_base_unsigned});
-    kernel_size = std.mem.alignForwardLog2(@intFromPtr(@extern(*u64, .{ .name = "__kernel_end__" })) - phys_mapping_base_unsigned, 24);
-    dbg.printf("kernel physical end 0x{X}\r\n", .{kernel_size});
+pub fn init(paddrwidth: u8, memmap: []*MemMapEntry) void {
+    phys_mapping_base = os.boot_info.hhdm_address_offset;
+    write.dbg("initial physical mapping base 0x{X}", .{phys_mapping_base});
+    
+    const phys_base = os.boot_info.kernel_physical_base;
+    const virt_base = os.boot_info.kernel_virtual_base;
+    const kernel_end = @intFromPtr(@extern(*u64, .{ .name = "__kernel_end__" }));
+
+    kernel_size = std.mem.alignForwardLog2(phys_base + kernel_end - virt_base, 24);
+    
+    write.dbg("kernel physical base 0x{X}", .{os.boot_info.kernel_physical_base});
+    write.dbg("kernel virtual base 0x{X}", .{os.boot_info.kernel_virtual_base});
+
+    write.dbg("kernel size 0x{X}", .{kernel_size});
     
     phys_addr_width = paddrwidth;
     
     pmm_sizes = pmm_sizes_global[0..(phys_addr_width - 12)];
 
+    write.dbg("Marking pages as free...", .{});
     for (memmap) |entry| {
-        if (entry.type == .conventional) {
-            var base = entry.base;
-            var size = entry.size;
+        if (entry.type == .usable) {
+            const base = entry.base;
+            const size = entry.size;
             const end = base + size;
-            if (end > max_phys_mem)
-                max_phys_mem = end;
-            
-            if (end < kernel_size) {
-                dbg.printf("skipping 0x{X}..0x{X} as it is wholly within space already reserved by the kernel\r\n", .{ base, end });
-                continue;
-            }
-            
-            if (end > phys_mapping_limit) {
-                dbg.printf("skipping 0x{X}..0x{X} as it exceeds the physical mapping limit 0x{X}\r\n", .{ base, end, phys_mapping_limit });
-                continue;
-            }
-            
-            if (base < kernel_size) {
-                const diff = kernel_size - base;
-                dbg.printf("adjusting 0x{X}..0x{X} forward 0x{X} bytes to avoid initial kernel block\r\n", .{ base, end, diff });
-                base = kernel_size;
-                size -= diff;
-            }
-            dbg.printf("marking 0x{X}..0x{X} (0x{X} bytes)\r\n", .{ base, end, size });
-            
+
+            write.dbg("marking 0x{X}..0x{X} (0x{X} bytes)", .{ base, end, size });
             mark_free(base, size);
         }
     }
 }
 
-pub fn enlarge_mapped_physical(memmap: []MemMapEntry, new_base: isize) void {
-    phys_mapping_base_unsigned = @bitCast(new_base);
-    phys_mapping_base = new_base;
+pub fn enlarge_mapped_physical(memmap: []*MemMapEntry, new_base: usize) void {
+    phys_mapping_base = @bitCast(new_base);
     const old_limit = phys_mapping_limit;
     phys_mapping_limit = @as(usize, 1) << @intCast(phys_addr_width);
     for (memmap) |entry| {
         
-        if (entry.type == .conventional and entry.base + entry.size >= old_limit) {
+        if (entry.type == .usable and entry.base + entry.size >= old_limit) {
             
-            dbg.printf("marking 0x{X}..0x{X} (0x{X} bytes)\r\n", .{ entry.base, entry.base + entry.size, entry.size });
+            write.dbg("marking 0x{X}..0x{X} (0x{X} bytes)", .{ entry.base, entry.base + entry.size, entry.size });
             mark_free(entry.base, entry.size);
         }
     }
@@ -87,11 +76,11 @@ pub fn ptr_from_physaddr(Ptr: type, paddr: usize) Ptr {
     if (@as(std.builtin.TypeId, @typeInfo(Ptr)) == .Optional and paddr == 0) {
         return null;
     }
-    return @ptrFromInt(paddr +% phys_mapping_base_unsigned);
+    return @ptrFromInt(paddr +% phys_mapping_base);
 }
 
 pub fn physaddr_from_ptr(ptr: anytype) usize {
-    return @intFromPtr(ptr) -% phys_mapping_base_unsigned;
+    return @intFromPtr(ptr) -% phys_mapping_base;
 }
 
 fn alloc_impl(idx: usize) error{OutOfMemory}!usize {

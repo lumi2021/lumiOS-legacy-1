@@ -1,9 +1,7 @@
 const std = @import("std");
 const io = @import("IO/port_io.zig");
-const alloc = @import("memory/allocator.zig");
 const os = @import("OS/os.zig");
 const cpuid = @import("utils/cpuid.zig");
-const dbg = @import("IO/debug.zig");
 
 const paging = @import("memory/paging.zig");
 
@@ -25,52 +23,42 @@ const task_man = @import("task_manager.zig");
 
 const interrupt_table = @import("interrupt_table.zig");
 
+const pci = @import("drivers/pci/pci.zig");
 
-const vtab = ZigAllocator.VTable {
-            .alloc = malloc,
-            .free = free,
-            .resize = reloc
-        };
+const write = @import("IO/debug.zig").write("Setup");
 
 pub fn init_setup() void {
     
-    dbg.puts("setupping GDT...\r\n");
+    write.dbg("setupping GDT...", .{});
     setup_GDT();
 
-    dbg.puts("setupping IDT...\r\n");
+    write.dbg("setupping IDT...", .{});
     setup_IDT();
 
     const paging_feats = paging.enumerate_paging_features();
-
-    dbg.printf("physical addr width: {d} (0x{X} pages)\r\n",
-    .{ paging_feats.maxphyaddr, @as(u64, 1) << @truncate(paging_feats.maxphyaddr - 12) });
-    dbg.printf("linear addr width {d}\r\n", .{paging_feats.linear_address_width});
     
-    dbg.puts("setupping PMM...\r\n");
-    pmm.init(paging_feats.maxphyaddr, os.boot_info.memory_map.*);
-    dbg.puts("initialized lower phys mem\r\n");
+    pmm.init(paging_feats.maxphyaddr, os.boot_info.memory_map);
+    write.dbg("initialized lower phys mem", .{});
 
-    // as vmm is not working, i will disable it for now :3
-    //dbg.puts("setupping VMM...\r\n");
-    //vmm.init(os.boot_info.memory_map.*) catch @panic("Error during VMM init!");
+    vmm.init(os.boot_info.memory_map) catch @panic("Error during VMM init!");
 
-    dbg.puts("setupping Allocator...\r\n");
+    write.dbg("setupping Allocator...", .{});
     setup_Allocator();
 
-    dbg.puts("setupping Task Manager...\r\n");
+    write.dbg("setupping Task Manager...", .{});
     setup_Task_manager();
 
-    dbg.puts("starting Schedue...\r\n");
+    write.dbg("starting Schedue...", .{});
     setup_timer();
+
+    write.dbg("starting PCI", .{});
+    pci.init() catch @panic("PCI cannot be initialized!");
 
 }
 
 
 pub inline fn setup_Allocator() void {
-    os.allocator = ZigAllocator {
-        .ptr = undefined,
-        .vtable = &vtab
-    };
+    os.allocator = vmm.raw_page_allocator.allocator();
 }
 
 fn malloc(_: *anyopaque, len: usize, _: u8, _: usize) ?[*]u8 {

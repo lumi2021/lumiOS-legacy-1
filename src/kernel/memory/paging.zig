@@ -1,10 +1,11 @@
 pub const entries = @import("page_table_entry.zig");
 const std = @import("std");
-const dbg = @import("../IO/debug.zig");
 
 const cpuid = @import("../utils/cpuid.zig");
 const pmm = @import("pmm.zig");
 const ctrl_registers = @import("../utils/ctrl_registers.zig");
+
+const write = @import("../IO/debug.zig").write("Paging");
 
 pub const PagingFeatures = packed struct {
     maxphyaddr: u8,
@@ -86,25 +87,23 @@ pub const PageSize = enum {
     huge,
 };
 
-const log = std.log.scoped(.page_tables);
-
 // maps a contiguous region of virtual memory to a contiguous region of physical memory
 // this function uses the largest possible page sizes within alignment and compatability limits
 // though the same caveats about huge pages and free physical memory apply to this function as to map_page
-pub fn map_range(base_phys: usize, base_linear: isize, length: usize) !void {
+pub fn map_range(base_phys: usize, base_linear: usize, length: usize) !void {
     var pa = base_phys;
     var la = base_linear;
     var sz = length;
-    if (!std.mem.isAlignedLog2(pa, 12) or !std.mem.isAlignedLog2(@bitCast(la), 12) or !std.mem.isAlignedLog2(sz, 12)) {
+    if (!std.mem.isAlignedLog2(pa, 12) or !std.mem.isAlignedLog2(la, 12) or !std.mem.isAlignedLog2(sz, 12)) {
         return error.misaligned_mapping_range;
     }
     while (sz > 0) {
-        if (std.mem.isAlignedLog2(pa, 30) and std.mem.isAlignedLog2(@bitCast(la), 30) and std.mem.isAlignedLog2(sz, 30) and sz >= 1 << 30) {
+        if (std.mem.isAlignedLog2(pa, 30) and std.mem.isAlignedLog2(la, 30) and std.mem.isAlignedLog2(sz, 30) and sz >= 1 << 30) {
             try map_page(pa, la, .huge);
             sz -= 1 << 30;
             pa += 1 << 30;
             la += 1 << 30;
-        } else if (std.mem.isAlignedLog2(pa, 21) and std.mem.isAlignedLog2(@bitCast(la), 21) and std.mem.isAlignedLog2(sz, 21) and sz >= 1 << 21) {
+        } else if (std.mem.isAlignedLog2(pa, 21) and std.mem.isAlignedLog2(la, 21) and std.mem.isAlignedLog2(sz, 21) and sz >= 1 << 21) {
             try map_page(pa, la, .large);
             sz -= 1 << 21;
             pa += 1 << 21;
@@ -118,9 +117,8 @@ pub fn map_range(base_phys: usize, base_linear: isize, length: usize) !void {
     }
 }
 
-pub noinline fn map_page(phys_addr: usize, linear_addr: isize, page_size: PageSize) !void {
-    const lin_unsigned: usize = @bitCast(linear_addr);
-    // dbg.printf("mapping {x:0>16} to {x:0>16} ({s})\r\n", .{ lin_unsigned, phys_addr, @tagName(page_size) });
+pub noinline fn map_page(phys_addr: usize, linear_addr: usize, page_size: PageSize) !void {
+    // write.dbg("mapping {x:0>16} to {x:0>16} ({s})", .{ linear_addr, phys_addr, @tagName(page_size) });
     // this method takes a physical address meaning the block is already mapped
     const alignment: u8 = switch (page_size) {
         .normal => 12,
@@ -128,15 +126,15 @@ pub noinline fn map_page(phys_addr: usize, linear_addr: isize, page_size: PageSi
         .huge => 30,
     };
     // double check the alignment of the addresses we got
-    if (!std.mem.isAlignedLog2(lin_unsigned, alignment)) {
-        dbg.printf("linear address 0x{X} misaligned for {s} page\r\n", .{ lin_unsigned, @tagName(page_size) });
+    if (!std.mem.isAlignedLog2(linear_addr, alignment)) {
+        write.dbg("linear address 0x{X} misaligned for {s} page", .{ linear_addr, @tagName(page_size) });
         return error.misaligned_page_linear_addr;
     }
     if (!std.mem.isAlignedLog2(phys_addr, alignment)) {
-        dbg.printf("physical address 0x{X} misaligned for {s} page\r\n", .{ phys_addr, @tagName(page_size) });
+        write.dbg("physical address 0x{X} misaligned for {s} page", .{ phys_addr, @tagName(page_size) });
         return error.misaligned_page_physical_addr;
     }
-    const split: SplitPagingAddr = @bitCast(lin_unsigned);
+    const split: SplitPagingAddr = @bitCast(linear_addr);
     const pml4: Table(entries.PML45E) = if (using_5_level_paging) b: {
         const pml5 = try get_or_create_root_table();
         var entry: *entries.PML45E = &pml5[@as(u9, @bitCast(split.pml4))];
@@ -170,7 +168,7 @@ pub noinline fn map_page(phys_addr: usize, linear_addr: isize, page_size: PageSi
         // gigabyte pages are supported
         var entry: *entries.PDPTE = &pdpt[split.directory];
         if (entry.present) {
-            dbg.printf("huge page already mapped for 0x{X}\r\n", .{lin_unsigned});
+            write.dbg("huge page already mapped for 0x{X}", .{linear_addr});
             return error.address_already_mapped;
         }
         entry.* = @bitCast(@as(usize, 0));
@@ -182,10 +180,10 @@ pub noinline fn map_page(phys_addr: usize, linear_addr: isize, page_size: PageSi
         entry.present = true;
         return;
     } else if (page_size == .huge) {
-        // dbg.printf("no huge page support, mapping a directory of large pages instead", .{});
+        // write.dbg("no huge page support, mapping a directory of large pages instead", .{});
         // no 1g page support so recurse and map 512 large pages. the higher level tables should all short-circuit here.
         for (0..512) |table| {
-            const new_addr = @as(isize, @bitCast(lin_unsigned + (table << 21)));
+            const new_addr: usize = linear_addr + (table << 21);
             try map_page(phys_addr + (table << 21), new_addr, .large);
         }
         return;
@@ -206,10 +204,10 @@ pub noinline fn map_page(phys_addr: usize, linear_addr: isize, page_size: PageSi
     if (page_size == .large) {
         var entry: *entries.PDE = &directory[split.table];
         if (entry.present) {
-            dbg.printf("large page already mapped for 0x{X}", .{lin_unsigned});
+            write.dbg("large page already mapped for 0x{X}", .{linear_addr});
             return error.address_already_mapped;
         }
-        // dbg.printf("agony and sorrow {X} {X}", .{ phys_addr, phys_addr >> 21 });
+        // write.dbg("agony and sorrow {X} {X}", .{ phys_addr, phys_addr >> 21 });
         entry.* = @bitCast(@as(usize, 0));
         entry.writable = true;
         entry.xd = false;
@@ -256,11 +254,12 @@ fn get_or_create_root_table() !Table(entries.PML45E) {
     cr3_new = ctrl_registers.read(.cr3);
     pgtbl = try create_page_table(entries.PML45E, &cr3_new);
     root_physaddr = cr3_new.get_phys_addr();
-    dbg.printf("page table root allocated at physical 0x{X}\r\n", .{root_physaddr});
+    write.dbg("page table root allocated at physical 0x{X}", .{root_physaddr});
     return pgtbl.?;
 }
 
 pub fn load_pgtbl() void {
+    write.dbg("setting page tables", .{});
     ctrl_registers.write(.cr3, cr3_new);
 }
 

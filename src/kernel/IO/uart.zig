@@ -46,13 +46,13 @@ pub inline fn uart_putchar(char: u8) void {
     port_io.outb(uart_port_com1, char);
 }
 
-pub fn uart_puts(str: []const u8) void {
+pub inline fn uart_puts(str: []const u8) void {
     for (str) |char| {
         uart_putchar(char);
     }
 }
 
-pub inline fn uart_printf(comptime str: []const u8, args: anytype) void {
+pub fn uart_printf(comptime str: []const u8, args: anytype) void {
     var buf: [256]u8 = undefined; 
     uart_puts(fmt.bufPrint(&buf, str, args) catch unreachable);
 }

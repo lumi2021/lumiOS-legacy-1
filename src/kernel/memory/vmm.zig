@@ -1,46 +1,45 @@
 const std = @import("std");
-const dbg = @import("../IO/debug.zig");
 const pmm = @import("pmm.zig");
 const paging = @import("paging.zig");
 const ctrl_registers = @import("../utils//ctrl_registers.zig");
+const os = @import("../OS/os.zig");
+
+const write = @import("../IO/debug.zig").write("VMM");
 
 const MemoryMapEntry = @import("../structures/BootInfo.zig").MemoryMapEntry;
 
-const idmap_base_4lvl: isize = -1 << 45;
-const idmap_base_5lvl: isize = -1 << 53;
-
-const log = std.log.scoped(.vmm);
-
 var phys_mapping_range_bits: u6 = undefined;
 
-pub fn init(memmap: []MemoryMapEntry) !void {
+pub fn init(memmap: []*MemoryMapEntry) !void {
 
-    paging.using_5_level_paging = paging.features.five_level_paging and ctrl_registers.read(.cr4).la57;
-    const idmap_base = if (paging.using_5_level_paging) idmap_base_5lvl else idmap_base_4lvl;
+    const base_phys = os.boot_info.kernel_physical_base;
+    const base_linear = os.boot_info.kernel_virtual_base;
 
-    dbg.printf("mapping all phys mem at 0x{X}\r\n", .{@as(usize, @bitCast(idmap_base))});
+    const idmap_base: usize = os.boot_info.hhdm_address_offset;
+
+    write.dbg("mapping all phys mem at 0x{X}", .{@as(usize, @bitCast(idmap_base))});
     phys_mapping_range_bits = if (paging.using_5_level_paging) @min(paging.features.maxphyaddr, 48) else @min(paging.features.maxphyaddr, 39);
     
-    dbg.printf("phys mapping range of {d} bits\r\n", .{phys_mapping_range_bits});
-    try paging.map_range(0, idmap_base, @as(usize, 1) << phys_mapping_range_bits);
+    write.dbg("phys mapping range of {d} bits", .{phys_mapping_range_bits});
+    try paging.map_range(0, @bitCast(idmap_base), @as(usize, 1) << phys_mapping_range_bits);
     
-    dbg.printf("mapping bottom {X} at 0x{X}\r\n", .{ pmm.kernel_size, @as(usize, @bitCast(@as(isize, -1 << 31))) });
-    try paging.map_range(0, -1 << 31, pmm.kernel_size);
+    write.dbg("mapping bottom 0x{X} at 0x{X}", .{ base_phys, base_linear });
+    try paging.map_range(base_phys, base_linear, pmm.kernel_size);
 
-    dbg.printf("mapping bottom 4M at 0\r\n", .{});
-    try paging.map_range(0, 0, 1 << 22);
-
-    //dump_paging_debug();
-
-    dbg.printf("finished page tables, applying\r\n", .{});
+    write.dbg("finished page tables, applying", .{});
     
     paging.load_pgtbl();
 
-    dbg.printf("pages mapped, relocating and enlarging pmm\r\n", .{});
+    write.dbg("pages mapped, relocating and enlarging pmm", .{});
     pmm.enlarge_mapped_physical(memmap, idmap_base);
     
-    dbg.printf("high physical memory given to pmm\r\n", .{});
+    write.dbg("high physical memory given to pmm", .{});
     paging.finalize_and_fix_root();
+}
+
+pub fn map_section(base_phys: usize, base_virt: usize, length: usize) !void {
+    write.dbg("mapping 0x{X:0>16} -> 0x{X:0>16} ({} bytes)", .{base_phys, base_virt, length});
+    try paging.map_range(base_phys, base_virt, length);
 }
 
 pub fn phys_from_virt(virt: anytype) usize {
@@ -142,24 +141,4 @@ pub fn alloc_page() !*anyopaque {
 
 pub fn free_page(ptr: *const anyopaque) void {
     pmm.free(phys_from_virt(@intFromPtr(ptr)), 1 << 12);
-}
-
-fn dump_paging_debug() void {
-    const addr: usize = 0xffffe000fd000000;
-    const p = addr - @as(usize, @bitCast(idmap_base_4lvl));
-    const split: paging.SplitPagingAddr = @bitCast(addr);
-    dbg.printf("address to map: 0x{X:0>16} {b:0>9}:{b:0>9}:{b:0>9}:{b:0>9}:{b:0>9}:{b:0>12}\r\n", .{ addr, @as(u9, @bitCast(split.pml4)), split.dirptr, split.directory, split.table, split.page, split.byte });
-    dbg.printf("expect phys addr: {X}:{X:0>3}\r\n", .{ p >> 12, p & 4095 });
-    const dirptr = paging.pgtbl.?[split.dirptr].get_phys_addr();
-    dbg.printf("dirptr[{d}] at 0x{X}\r\n", .{ split.dirptr, dirptr });
-    const directory = pmm.ptr_from_physaddr(paging.Table(paging.entries.PDPTE), dirptr)[split.directory].get_phys_addr();
-    dbg.printf("directory[{d}] at 0x{X}\r\n", .{ split.directory, directory });
-    const direntry = pmm.ptr_from_physaddr(paging.Table(paging.entries.PDE), directory)[split.table];
-    if (direntry.page_size) {
-        dbg.printf("2mb page[{d}] at 0x{X}\r\n", .{ split.table, direntry.get_phys_addr() });
-    } else {
-        const table = direntry.get_phys_addr();
-        dbg.printf("table[{d}] at 0x{X}\r\n", .{ split.table, table });
-        dbg.printf("4k page[{d}] at 0x{X}\r\n", .{ split.page, pmm.ptr_from_physaddr(paging.Table(paging.entries.PTE), table)[split.page].get_phys_addr() });
-    }
 }

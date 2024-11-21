@@ -17,7 +17,14 @@ pub fn init_interrupt_table(idt: *[256]IDTEntry) void {
     }
 
     interrupts[0] = handle_divide_by_zero;
+
     interrupts[6] = handle_invalid_opcode;
+
+    interrupts[8] = handle_double_fault;
+
+    interrupts[13] = handle_general_protection;
+    interrupts[14] = handle_page_fault;
+    
     interrupts[32] = handle_timer_interrupt;
 
 }
@@ -26,6 +33,7 @@ pub fn unhandled_interrupt(f: *InterruptFrame) void {
 
     printf("Unhandled interrupt {0} (0x{0X:0>2})!\n", .{f.intnum});
     f.log();
+    asm volatile ("hlt");
 }
 
 pub fn handle_divide_by_zero(_: *InterruptFrame) void {
@@ -41,13 +49,43 @@ pub fn handle_invalid_opcode(_: *InterruptFrame) void {
     
 }
 
-fn handle_timer_interrupt(_: *InterruptFrame) void {
-    puts("Timeout!\n");
-    TaskManager.schedule();
+pub fn handle_general_protection(frame: *InterruptFrame) void {
+
+    puts("General Protection! halting!\r\n");
+    frame.log();
+    asm volatile ("hlt");
+    
 }
 
-// Interrupt system stuff
-const InterruptFrame = extern struct {
+pub fn handle_page_fault(frame: *InterruptFrame) void {
+
+    var addr: u64 = undefined;
+    asm volatile ("mov %CR2, %[add]" :[add] "=r" (addr) :);
+
+    printf("Page Fault trying to acess ${X:0>16}!\r\n", .{addr});
+    frame.log();
+    asm volatile ("hlt");
+    
+}
+
+pub fn handle_double_fault(frame: *InterruptFrame) void {
+
+    var addr: u64 = undefined;
+    asm volatile ("mov %CR2, %[add]" :[add] "=r" (addr) :);
+
+    printf("Double fault! halting! ${X:0>16}!\r\n", .{addr});
+    frame.log();
+    asm volatile ("hlt");
+    
+}
+
+fn handle_timer_interrupt(frame: *InterruptFrame) void {
+    TaskManager.schedule(frame);
+}
+
+
+// Interrupt system stuff (TODO reallocate to IDT.zig)
+pub const InterruptFrame = extern struct {
     es: u64,
     ds: u64,
     r15: u64,
@@ -73,7 +111,7 @@ const InterruptFrame = extern struct {
     rsp: u64,
     ss: u64,
 
-    fn log(self: *@This()) void {
+    pub fn log(self: *@This()) void {
         printf("  rax={X:0>16} rbx={X:0>16} rcx={X:0>16} rdx={X:0>16}\n", .{ self.rax, self.rbx, self.rcx, self.rdx });
         printf("  rsi={X:0>16} rdi={X:0>16} rbp={X:0>16} rsp={X:0>16}\n", .{ self.rsi, self.rdi, self.rbp, self.rsp });
         printf("  r8 ={X:0>16} r9 ={X:0>16} r10={X:0>16} r11={X:0>16}\n", .{ self.r8, self.r9, self.r10, self.r11 });
@@ -149,13 +187,32 @@ export fn interrupt_handler(fptr: u64) void {
 pub fn make_handler(comptime intnum: u8) fn() callconv(.Naked) void {
     return struct {
         fn func() callconv(.Naked) void {
+            const ec = if (comptime (!has_error_code(intnum))) "push $0\n" else "";
             asm volatile (
-                \\ push $0
-                \\ push %[intnum]
-                \\ jmp interrupt_common
+                ec ++
+                "push %[intnum]\njmp interrupt_common"
                 :
                 : [intnum] "i" (intnum)
             );
         }
     }.func;
+}
+
+fn has_error_code(intnum: u8) bool {
+    return switch (intnum) {
+        // Exceptions
+        0x00...0x07 => false,
+        0x08 => true,
+        0x09 => false,
+        0x0A...0x0E => true,
+        0x0F...0x10 => false,
+        0x11 => true,
+        0x12...0x14 => false,
+        //0x15 ... 0x1D => unreachable,
+        0x1E => true,
+        //0x1F          => unreachable,
+
+        // Other interrupts
+        else => false,
+    };
 }
