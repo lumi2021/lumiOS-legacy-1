@@ -1,13 +1,11 @@
-/* Starts at 1M (0x100000). */
-KERNEL_PHYS_START = 1M;
+KERNEL_VIRT_START = 0xffffffff80000000;
 KERNEL_STACK_SIZE = 0x4000;
 
-ENTRY(_start)
+ENTRY(__boot_entry__)
 
 SECTIONS {
 
-    /* . = -2048M; */
-    . = KERNEL_PHYS_START;
+    . = KERNEL_VIRT_START;
     
     __base__ = .;
     __kernel_start__ = .;
