@@ -1,5 +1,7 @@
 const limine = @import("limine.zig");
 
+const BootInfo = @import("boot_info.zig").BootInfo;
+
 pub export var framebuffer_request: limine.FramebufferRequest = .{};
 pub export var memory_map_request: limine.MemoryMapRequest = .{};
 pub export var kernel_addr_request: limine.KernelAddressRequest = .{};
@@ -9,7 +11,6 @@ pub export var base_revision: limine.BaseRevision = .{ .revision = 2 };
 const kernel_entry = @import("../main.zig").main;
 
 export fn __boot_entry__() callconv(.C) noreturn {
-
     if (framebuffer_request.response == null) done();
     if (framebuffer_request.response.?.framebuffer_count < 1) done();
     if (memory_map_request.response == null) done();
@@ -21,13 +22,26 @@ export fn __boot_entry__() callconv(.C) noreturn {
     const addr = kernel_addr_request.response.?;
     const hhdr = hhdm_request.response.?;
 
-    _ = fbuffer;
-    _ = mmap;
-    _ = addr;
-    _ = hhdr;
+    const boot_info = BootInfo {
+        .kernel_physical_base = addr.physical_base,
+        .kernel_virtual_base = addr.virtual_base,
+        .hhdm_address_offset = hhdr.offset,
+        
+        .framebuffer = .{
+            .framebuffer = fbuffer.address,
+            .size = fbuffer.pitch * fbuffer.height,
+            .width = fbuffer.width,
+            .height = fbuffer.height,
+            .pixels_per_scan_line = fbuffer.pitch,
+        },
+        .memory_map = @ptrCast(mmap.entries_ptr[0..mmap.entry_count])
+    };
 
-    kernel_entry();
-
+    kernel_entry(boot_info);
 }
 
-inline fn done() noreturn { while (true) { asm volatile ("hlt"); } }
+inline fn done() noreturn {
+    while (true) {
+        asm volatile ("hlt");
+    }
+}
