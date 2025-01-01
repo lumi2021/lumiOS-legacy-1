@@ -24,13 +24,21 @@ pub fn main(binfo: BootInfo) noreturn {
 
     write.log("# Starting setup routine...", .{});
     sys.sys_flags.clear_interrupt();
-    kernel_setup() catch unreachable;
+    kernel_setup() catch |err| @panic(@errorName(err));
+
+    write.log("# Starting PCI...", .{});
+    os.drivers.pci.init() catch |err| @panic(@errorName(err));
+
+    //write.log("# Starting startup programs...", .{});
+    //os.theading.run_process(@constCast("Process A"), @import("test-processes/process_a.zig").init, null) catch @panic("Cannot initialize process");
+    //os.theading.run_process(@constCast("Process B"), @import("test-processes/process_b.zig").init, null) catch @panic("Cannot initialize process");
 
     write.log("# Starting schedue...", .{});
     set_timer();
-    sys.sys_flags.set_interrupt();
 
-    while (true) {}
+    st.pop();
+    write.log("halting init thread...", .{});
+    while (true) sys.sys_flags.set_interrupt();
 }
 
 fn kernel_setup() !void {
@@ -79,7 +87,8 @@ fn set_timer() void {
     io.outb(0x21, 0x0);
     io.outb(0xA1, 0x0);
 
-    const divisor: u16 = 1193182 / 100;
+    const frquency = 20;
+    const divisor: u16 = 1193182 / frquency;
 
     io.outb(0x43, 0x36);
     io.outb(0x40, @intCast(divisor & 0xFF));
@@ -111,5 +120,6 @@ pub fn panic(msg: []const u8, stack_trace: ?*builtin.StackTrace, return_address:
         }
     }
 
+    os.theading.schedue.kill_current_process();
     while (true) {}
 }

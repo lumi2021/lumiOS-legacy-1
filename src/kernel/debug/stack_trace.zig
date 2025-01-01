@@ -16,6 +16,15 @@ pub inline fn push(src: SourceLocation) void {
     if (stack_trace_count >= 1024) @panic("Stack overflow!");
 }
 
+pub inline fn push_process(task_name: [:0]u8) void {
+    if (!enabled) return;
+    stack_trace[stack_trace_count] = clean_buf;
+    _ = (std.fmt.bufPrint(&stack_trace[stack_trace_count], "Process {s}" ++ .{0}, .{task_name}) catch @panic("No space left!"));
+
+    stack_trace_count += 1;
+    if (stack_trace_count >= 1024) @panic("Stack overflow!");
+}
+
 pub inline fn push_interrupt(int_num: u64) void {
     if (!enabled) return;
     stack_trace[stack_trace_count] = clean_buf;

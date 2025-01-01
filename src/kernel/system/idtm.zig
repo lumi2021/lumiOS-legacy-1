@@ -1,5 +1,4 @@
 const os = @import("root").os;
-const st = os.stack_tracer;
 
 const gdt_ops = os.system.global_descriptor_table;
 const idt_ops = os.system.interrupt_descriptor_table;
@@ -8,6 +7,7 @@ const IDTR = idt_ops.IDTPtr;
 const InterruptFrame = os.theading.TaskContext;
 
 const writer = os.console_write("IDTM");
+const st = os.stack_tracer;
 
 const IntHandler = *const fn (*InterruptFrame) void;
 pub var interrupts: [256]IntHandler = [_]IntHandler{unhandled_interrupt} ** 256;
@@ -23,7 +23,7 @@ fn init_interrupt_table(idt: *[256]IDTEntry) void {
 }
 
 fn unhandled_interrupt(frame: *InterruptFrame) void {
-    writer.err("Unhandled interrupt {0} (0x{0X:0>2})!\r\n {1}", .{frame.intnum, frame});
+    writer.err("Unhandled interrupt {0} (0x{0X:0>2})!\r\n {1}", .{ frame.intnum, frame });
 }
 
 export fn interrupt_common() callconv(.Naked) void {
@@ -81,6 +81,10 @@ export fn interrupt_common() callconv(.Naked) void {
 export fn interrupt_handler(fptr: u64) void {
     const int_frame: *InterruptFrame = @ptrFromInt(fptr);
     int_frame.intnum &= 0xFF;
+
+    writer.dbg("Branching to interrupt {X:0>2}...", .{int_frame.intnum});
+
+    writer.dbg("\n{}", .{int_frame});
 
     st.push_interrupt(int_frame.intnum);
     interrupts[int_frame.intnum](int_frame);

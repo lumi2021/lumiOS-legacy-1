@@ -14,24 +14,35 @@ pub fn build(b: *Build) void {
 
     const run_cmd = b.addSystemCommand(&.{
         "qemu-system-x86_64",
-        "-M", "q35",
-        "-bios", "deps/debug/OVMF.fd",
-        
+        "-M",
+        "q35",
+        "-bios",
+        "deps/debug/OVMF.fd",
+
         // HD, serial, video, etc
-        "-hdd",  "fat:rw:zig-out",
-        "-serial",  "mon:stdio",
-        "-monitor",  "vc",
-        "-display",  "gtk",
+        "-hdd",
+        "fat:rw:zig-out",
+        "-serial",
+        "mon:stdio",
+        "-monitor",
+        "vc",
+        "-display",
+        "gtk",
 
         // Aditional devices
         //"-usb",
-        "-device", "qemu-xhci,id=usb",
-        "-device", "usb-kbd",
-        "-device", "usb-mouse",
-        
+        "-device",
+        "qemu-xhci,id=usb",
+        "-device",
+        "usb-kbd",
+        "-device",
+        "usb-mouse",
+
         // Debug
-        "-D", "log.txt",
-        "-d", "int,cpu_reset",
+        "-D",
+        "log.txt",
+        "-d",
+        "int,cpu_reset",
         "--no-reboot",
         "--no-shutdown",
         "-s",

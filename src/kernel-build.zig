@@ -4,7 +4,6 @@ const Target = std.Target;
 const Step = Build.Step;
 
 pub fn build_kernel(b: *Build) *Step {
-    
     var kernel_query = Target.Query{
         .cpu_arch = .x86_64,
         .os_tag = .freestanding,
@@ -21,15 +20,10 @@ pub fn build_kernel(b: *Build) *Step {
     kernel_query.cpu_features_sub.addFeature(@intFromEnum(Feature.avx2));
 
     const optimize = b.standardOptimizeOption(.{ .preferred_optimize_mode = .ReleaseSmall });
-    
-    const kernel = b.addExecutable(.{
-        .name = "kernelx64",
-        .root_source_file = b.path("src/kernel/main.zig"),
-        .target = b.resolveTargetQuery(kernel_query),
-        .optimize = optimize,
-        .code_model = .kernel
-    });
 
+    const kernel = b.addExecutable(.{ .name = "kernelx64", .root_source_file = b.path("src/kernel/main.zig"), .target = b.resolveTargetQuery(kernel_query), .optimize = optimize, .code_model = .kernel });
+
+    kernel.root_module.red_zone = false;
     kernel.entry = .disabled;
     kernel.setLinkerScriptPath(b.path("deps/linking/linkScript.ld"));
 

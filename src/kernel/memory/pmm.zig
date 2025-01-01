@@ -118,7 +118,7 @@ pub fn alloc(len: usize) !usize {
     st.pop();
     return p;
 }
-fn alloc_impl(idx: usize) error{OutOfMemory}!usize {
+fn alloc_impl(idx: usize) error{OutOfMemory} !usize {
     st.push(@src());
 
     if (free_roots[idx] == 0) {

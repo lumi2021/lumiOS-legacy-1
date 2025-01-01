@@ -49,6 +49,7 @@ pub fn init(memmap: []*MemMapEntry) !void {
     st.pop();
 }
 
+const write_allocator = os.console_write("Alloc");
 pub const allocator = struct {
     vtab: std.mem.Allocator.VTable = .{ .alloc = alloc, .resize = resize, .free = free },
 
@@ -60,6 +61,7 @@ pub const allocator = struct {
         st.push(@src());
 
         const alloc_len = pmm.get_allocation_size(@max(@as(usize, 1) << @truncate(ptr_align), len));
+        write_allocator.dbg("Trying to allocate {} bytes...", .{alloc_len});
 
         const ptr = pmm.ptr_from_paddr([*]u8, pmm.alloc(alloc_len) catch |err| {
             write.err("{}", .{err});
@@ -104,6 +106,8 @@ pub const allocator = struct {
 
         const old_alloc = pmm.get_allocation_size(@max(old_mem.len, old_align));
         const paddr = pmm.paddr_from_ptr(old_mem.ptr);
+
+        write_allocator.dbg("Trying to free {} bytes in address ${X:0>16}...", .{ old_alloc, paddr });
 
         pmm.free(paddr, old_alloc);
 
