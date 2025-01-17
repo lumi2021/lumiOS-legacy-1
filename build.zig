@@ -22,21 +22,17 @@ pub fn build(b: *Build) void {
         // HD, serial, video, etc
         "-hdd",
         "fat:rw:zig-out",
+
         "-serial",
         "mon:stdio",
+
         "-monitor",
         "vc",
         "-display",
         "gtk",
 
         // Aditional devices
-        //"-usb",
-        "-device",
-        "qemu-xhci,id=usb",
-        "-device",
-        "usb-kbd",
-        "-device",
-        "usb-mouse",
+
 
         // Debug
         "-D",

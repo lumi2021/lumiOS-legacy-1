@@ -4,6 +4,7 @@ pub const os = @import("os.zig");
 const BootInfo = os.boot_info.BootInfo;
 
 const sys = os.system;
+const io = os.port_io;
 
 pub var boot_info: BootInfo = undefined;
 
@@ -26,15 +27,16 @@ pub fn main(binfo: BootInfo) noreturn {
     sys.sys_flags.clear_interrupt();
     kernel_setup() catch |err| @panic(@errorName(err));
 
-    write.log("# Starting PCI...", .{});
-    os.drivers.pci.init() catch |err| @panic(@errorName(err));
+    write.log("# Starting drivers...", .{});
+    os.drivers.init_all_drivers() catch |err| @panic(@errorName(err));
 
     //write.log("# Starting startup programs...", .{});
     //os.theading.run_process(@constCast("Process A"), @import("test-processes/process_a.zig").init, null) catch @panic("Cannot initialize process");
     //os.theading.run_process(@constCast("Process B"), @import("test-processes/process_b.zig").init, null) catch @panic("Cannot initialize process");
 
     write.log("# Starting schedue...", .{});
-    set_timer();
+    setup_pic();
+    setup_timer();
 
     st.pop();
     write.log("halting init thread...", .{});
@@ -43,6 +45,7 @@ pub fn main(binfo: BootInfo) noreturn {
 
 fn kernel_setup() !void {
     st.push(@src());
+    defer st.pop();
 
     errdefer @panic("Error duting kernel sutupping...");
 
@@ -63,29 +66,31 @@ fn kernel_setup() !void {
 
     write.log(" - Setting up Task Manager...", .{});
     os.theading.schedue.init();
-
-    st.pop();
 }
 
-fn set_timer() void {
+fn setup_pic() void {
     st.push(@src());
+    defer st.pop();
 
-    const io = os.port_io;
+    io.outb(0x20, 0x11); // Send 0x11 (ICW1) to master PIC (port 0x20)
+    io.outb(0xA0, 0x11); // Send 0x11 (ICW1) to slave  PIC (port 0xA0)
 
-    io.outb(0x20, 0x11);
-    io.outb(0xA0, 0x11);
+    io.outb(0x21, 0x20); // Configurate the master PIC interruption vector base (0x20)
+    io.outb(0xA1, 0x28); // Configurate the slave  PIC interruption vector base (0x28)
 
-    io.outb(0x21, 0x20);
-    io.outb(0xA1, 0x28);
+    io.outb(0x21, 0x04); // Configurate the comunication line betwen master - slave PIC (IR2)
+    io.outb(0xA1, 0x02); // PIC is on line 2
 
-    io.outb(0x21, 0x04);
-    io.outb(0xA1, 0x02);
+    io.outb(0x21, 0x01); // Enables 8086/88 (ICW4) in master PIC
+    io.outb(0xA1, 0x01); // Enables 8086/88 (ICW4) in slave  PIC
 
-    io.outb(0x21, 0x01);
-    io.outb(0xA1, 0x01);
+    io.outb(0x21, 0x00); // Enables all interrupts from master PIC
+    io.outb(0xA1, 0x00); // Enables all interrupts from slave  PIC
+}
 
-    io.outb(0x21, 0x0);
-    io.outb(0xA1, 0x0);
+fn setup_timer() void {
+    st.push(@src());
+    defer st.pop();
 
     const frquency = 20;
     const divisor: u16 = 1193182 / frquency;
@@ -93,8 +98,6 @@ fn set_timer() void {
     io.outb(0x43, 0x36);
     io.outb(0x40, @intCast(divisor & 0xFF));
     io.outb(0x40, @intCast((divisor >> 8) & 0xFF));
-
-    st.pop();
 }
 
 pub fn panic(msg: []const u8, stack_trace: ?*builtin.StackTrace, return_address: ?usize) noreturn {

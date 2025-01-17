@@ -7,6 +7,11 @@ pub const sys_flags = switch (arch) {
     .aarch64 => @import("arm64/asm_flags.zig"),
     else => unreachable,
 };
+pub const sys_regs = switch (arch) {
+    .x86_64 => @import("x86_64/regs.zig"),
+    //.aarch64 => @import("arm64/regs.zig"),
+    else => unreachable,
+};
 
 pub const global_descriptor_table = switch (arch) {
     .x86_64 => @import("x86_64/GDT.zig"),

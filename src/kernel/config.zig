@@ -1,13 +1,17 @@
+pub const input = .{
+    .usb = .{ .enable = false },
+    .ps2 = .{ .enable = true, .keyboard = true, .mouse = true },
+};
+
+pub const max_ioapics = 5;
+
 pub const debug_ignore: []const KeyValuePair = &[_]KeyValuePair{
     .{ .key = "Main", .value = default },
     .{ .key = "PMM", .value = ignore_all },
     .{ .key = "VMM", .value = ignore_all },
     .{ .key = "IDTM", .value = ignore_all },
     .{ .key = "Paging", .value = ignore_all },
-    .{ .key = "Schedue", .value = default },
-
-    .{ .key = "Process A", .value = default },
-    .{ .key = "Process B", .value = default },
+    .{ .key = "Schedue", .value = ignore_all },
 };
 
 const KeyValuePair = struct { key: []const u8, value: u8 };

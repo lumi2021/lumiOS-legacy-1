@@ -12,6 +12,10 @@ const st = os.stack_tracer;
 const IntHandler = *const fn (*InterruptFrame) void;
 pub var interrupts: [256]IntHandler = [_]IntHandler{unhandled_interrupt} ** 256;
 
+pub const syscall_vector: u8 = 0x80;
+pub const invlpg_vector: u8 = 0xFE;
+pub const spurious_vector: u8 = 0xFF;
+
 pub fn init() void {
     init_interrupt_table(&idt_ops.entries);
 }
@@ -23,6 +27,9 @@ fn init_interrupt_table(idt: *[256]IDTEntry) void {
 }
 
 fn unhandled_interrupt(frame: *InterruptFrame) void {
+    st.push(@src());
+    defer st.pop();
+
     writer.err("Unhandled interrupt {0} (0x{0X:0>2})!\r\n {1}", .{ frame.intnum, frame });
 }
 
@@ -123,4 +130,11 @@ fn has_error_code(intnum: u8) bool {
         // Other interrupts
         else => false,
     };
+}
+
+pub fn allocate_vector() u8 {
+    for (0x30..0xF0) |i| {
+        if (interrupts[i] == unhandled_interrupt) return @intCast(i);
+    }
+    @panic("No interrupt availeable!");
 }

@@ -32,6 +32,11 @@ pub fn init() void {
 }
 
 pub fn register_device(device: pci.Addr) void {
+    if (comptime (!os.config.input.usb.enable)) {
+        write.warn("USB input is disabled!", .{});
+        return;
+    }
+
     write.dbg("Registring USB device...", .{});
 
     const barInfo = device.barinfo(0);

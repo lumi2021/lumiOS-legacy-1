@@ -115,10 +115,8 @@ pub fn do_schedue(currContext: *TaskContext) void {
     st.pop();
 }
 
-fn no_task_in_queue() noreturn {
-    write.err("Nothing to do!", .{});
-    while (true) {}
-    unreachable;
+fn no_task_in_queue() void {
+    write.dbg("Nothing to do!", .{});
 }
 
 fn process_handler(funcPtr: usize, argsPtr: usize) callconv(.C) noreturn {
