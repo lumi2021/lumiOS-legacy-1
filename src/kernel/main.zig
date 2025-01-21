@@ -27,12 +27,15 @@ pub fn main(binfo: BootInfo) noreturn {
     sys.sys_flags.clear_interrupt();
     kernel_setup() catch |err| @panic(@errorName(err));
 
+    write.log("# Starting system calls...", .{});
+    try os.syscalls.init();
+
     write.log("# Starting drivers...", .{});
     os.drivers.init_all_drivers() catch |err| @panic(@errorName(err));
 
     //write.log("# Starting startup programs...", .{});
-    //os.theading.run_process(@constCast("Process A"), @import("test-processes/process_a.zig").init, null) catch @panic("Cannot initialize process");
-    //os.theading.run_process(@constCast("Process B"), @import("test-processes/process_b.zig").init, null) catch @panic("Cannot initialize process");
+    os.theading.run_process(@constCast("Process A"), @import("test-processes/process_a.zig").init, null, 0) catch @panic("Cannot initialize process");
+    //os.theading.run_process(@constCast("Process B"), @import("test-processes/process_b.zig").init, null, 0) catch @panic("Cannot initialize process");
 
     write.log("# Starting schedue...", .{});
     setup_pic();
@@ -40,6 +43,7 @@ pub fn main(binfo: BootInfo) noreturn {
 
     st.pop();
     write.log("halting init thread...", .{});
+    
     while (true) sys.sys_flags.set_interrupt();
 }
 

@@ -58,23 +58,22 @@ pub const allocator = struct {
     }
 
     fn alloc(_: *anyopaque, len: usize, ptr_align: u8, _: usize) ?[*]u8 {
-        st.push(@src());
+        st.push(@src()); defer st.pop();
 
         const alloc_len = pmm.get_allocation_size(@max(@as(usize, 1) << @truncate(ptr_align), len));
         write_allocator.dbg("Trying to allocate {} bytes...", .{alloc_len});
 
         const ptr = pmm.ptr_from_paddr([*]u8, pmm.alloc(alloc_len) catch |err| {
             write.err("{}", .{err});
-            st.pop();
             return null;
         });
 
-        st.pop();
+        write_allocator.dbg("Allocating {} bytes in address ${X:0>16}...", .{ len, @intFromPtr(ptr) });
         return ptr;
     }
 
     fn resize(_: *anyopaque, old_mem: []u8, old_align: u8, new_size: usize, ret_addr: usize) bool {
-        st.push(@src());
+        st.push(@src()); defer st.pop();
 
         const old_alloc = pmm.get_allocation_size(@max(old_mem.len, old_align));
 
@@ -83,7 +82,6 @@ pub const allocator = struct {
         if (new_size == 0) {
             free(undefined, old_mem, old_align, ret_addr);
 
-            st.pop();
             return true;
         } else {
             const new_alloc = pmm.get_allocation_size(@max(new_size, old_align));
@@ -96,7 +94,6 @@ pub const allocator = struct {
                 curr_alloc /= 2;
             }
 
-            st.pop();
             return true;
         }
     }

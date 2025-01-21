@@ -157,12 +157,10 @@ pub fn free(phys_addr: usize, len: usize) void {
     st.pop();
 }
 fn free_impl(phys_addr: usize, index: usize) void {
-    st.push(@src());
+    st.push(@src()); defer st.pop();
 
     ptr_from_paddr(*usize, phys_addr).* = free_roots[index];
     free_roots[index] = phys_addr;
-
-    st.pop();
 }
 
 pub inline fn vaddr_from_paddr(paddr: usize) usize {

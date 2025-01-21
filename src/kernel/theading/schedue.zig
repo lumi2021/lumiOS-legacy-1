@@ -2,6 +2,8 @@ const std = @import("std");
 const os = @import("root").os;
 const theading = @import("theading.zig");
 
+const gdt = os.system.global_descriptor_table;
+
 const Task = theading.Task;
 const TaskContext = theading.TaskContext;
 
@@ -19,6 +21,8 @@ var current_task: ?*Task = null;
 var allocator: std.mem.Allocator = undefined;
 var default_context: TaskContext = undefined;
 
+var is_first_scheduing = false;
+
 const ProcessFunctionType = *const fn (?*anyopaque) callconv(.C) isize;
 
 pub fn init() void {
@@ -31,25 +35,33 @@ pub fn init() void {
     st.pop();
 }
 
-pub fn run_process(taskName: [:0]u8, entry: ProcessFunctionType, args: ?*anyopaque) !void {
-    st.push(@src());
+pub fn run_process(taskName: [:0]u8, entry: ProcessFunctionType, args: ?*const anyopaque, argssize: usize) !void {
+    st.push(@src()); defer st.pop();
 
     write.dbg("Scheduing task \"{s}\" to be initialized...", .{taskName});
 
     const task = Task.allocate_new();
     try task.alloc_stack();
 
+    const talloc = task.taskAllocator.allocator();
+
+    if (argssize > 0) if (args) |a| {
+        const argsptr = try talloc.alloc(u8, argssize);
+        const argssrc = @as([*]u8, @constCast(@alignCast(@ptrCast(a))))[0..argssize];
+
+        std.mem.copyForwards(u8, @constCast(argsptr), argssrc);
+
+        task.args_pointer = @intFromPtr(argsptr.ptr);
+    };
+
     task.task_name = taskName;
     task.entry_pointer = @intFromPtr(entry);
-    task.args_pointer = @intFromPtr(args);
 
     try to_initialize_list.append(task);
-
-    st.pop();
 }
 
 fn initialize_process(task: *Task) void {
-    st.push(@src());
+    st.push(@src()); defer st.pop();
 
     task.context = default_context;
 
@@ -62,14 +74,16 @@ fn initialize_process(task: *Task) void {
     task.context.rsi = task.args_pointer; // argsPtr
 
     task.context.eflags = 1 << 9;
+    task.context.cs = gdt.selector.code64;
+    task.context.ds = gdt.selector.data64;
+    task.context.ss = gdt.selector.data64;
+    task.context.es = gdt.selector.null;
 
     task_list.append(task) catch @panic("unexected");
-
-    st.pop();
 }
 
 fn select_next_task() void {
-    st.push(@src());
+    st.push(@src()); defer st.pop();
 
     write.dbg("w: {}; r {}; i: {}", .{ to_initialize_list.items.len, task_list.items.len, task_idx });
 
@@ -84,12 +98,10 @@ fn select_next_task() void {
         task_idx += 1;
         if (task_idx >= task_list.items.len) task_idx = 0;
     }
-
-    st.pop();
 }
 
 pub fn do_schedue(currContext: *TaskContext) void {
-    st.push(@src());
+    st.push(@src()); defer st.pop();
 
     write.dbg("Scheduing...", .{});
     if (task_list.items.len == 0 and to_initialize_list.items.len == 0) no_task_in_queue();
@@ -98,9 +110,9 @@ pub fn do_schedue(currContext: *TaskContext) void {
     if (current_task) |cTask| {
         write.dbg("Pausing task \"{s}\"...", .{cTask.task_name});
         cTask.context = currContext.*;
-        st.pop();
         current_task = null;
-    } else default_context = currContext.*;
+        st.pop();
+    } else if (is_first_scheduing) default_context = currContext.*;
 
     // change task
     select_next_task();
@@ -111,8 +123,8 @@ pub fn do_schedue(currContext: *TaskContext) void {
         currContext.* = cTask.context;
         st.push_process(cTask.task_name);
     }
-
-    st.pop();
+    // fallback to let it on hold
+    else currContext.* = default_context;
 }
 
 fn no_task_in_queue() void {
@@ -120,22 +132,19 @@ fn no_task_in_queue() void {
 }
 
 fn process_handler(funcPtr: usize, argsPtr: usize) callconv(.C) noreturn {
-    task_write.dbg("p1: {X}; p2: {X}", .{ funcPtr, argsPtr });
-
     const entry: ProcessFunctionType = @ptrFromInt(funcPtr);
     const args: ?*anyopaque = @ptrFromInt(argsPtr);
 
     // calling
     const res = entry(args);
-    task_write.dbg("Finishing task...", .{});
-    task_write.dbg("Status code: {}", .{res});
+
+    // cleaning
+    task_write.dbg("Finishing task... Status code: {}", .{res});
 
     kill_current_process();
-    while (true) {} // wait for scheduing
 }
 
-pub fn kill_current_process() void {
-    os.system.sys_flags.clear_interrupt();
+pub fn kill_current_process() noreturn {
     st.push(@src());
 
     if (current_task) |curr| {
@@ -143,9 +152,19 @@ pub fn kill_current_process() void {
             if (e == curr) _ = task_list.orderedRemove(i);
         }
 
-        //os.memory.allocator.destroy(@as(*u8, @ptrFromInt(curr.args_pointer)));
+        curr.taskAllocator.deinit();
+
+        task_write.dbg("Task destroyed", .{});
     }
+    current_task = null;
+
+    task_write.dbg("forcing schedue...", .{});
 
     st.pop();
-    os.system.sys_flags.set_interrupt();
+    asm volatile("int $0x20");
+    unreachable;
+}
+
+pub fn kill_current_process_and_return() void {
+    
 }

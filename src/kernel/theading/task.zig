@@ -2,7 +2,6 @@ const std = @import("std");
 const os = @import("root").os;
 
 const TaskContext = os.theading.TaskContext;
-const TaskEntry = os.theading.TaskEntry;
 
 const write = os.console_write("Task");
 const st = os.stack_tracer;
@@ -22,25 +21,30 @@ pub const Task = struct {
 
     context: TaskContext,
 
+    taskAllocator: std.heap.ArenaAllocator,
+
     pub fn allocate_new() *Task {
         st.push(@src());
+        defer st.pop();
 
         const ptr = os.memory.allocator.create(Task) catch @panic("undefined error");
+        
         ptr.context = std.mem.zeroes(TaskContext);
+        ptr.taskAllocator = std.heap.ArenaAllocator.init(os.memory.allocator);
 
-        st.pop();
         return ptr;
     }
 
     pub fn alloc_stack(self: *@This()) !void {
         st.push(@src());
+        defer st.pop();
 
-        self.stack = try os.memory.allocator.alloc(u8, total_size);
-        errdefer os.memory.allocator.free(self.stack);
+        const allocator = self.taskAllocator.allocator();
+
+        self.stack = try allocator.alloc(u8, total_size);
+        errdefer allocator.free(self.stack);
 
         self.stack_pointer = @intFromPtr(&self.stack) + total_size;
-
-        st.pop();
     }
 
     pub fn format(self: *const @This(), comptime _: []const u8, _: std.fmt.FormatOptions, fmt: anytype) !void {

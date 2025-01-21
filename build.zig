@@ -48,7 +48,9 @@ pub fn build(b: *Build) void {
 
     run_cmd.step.dependOn(&install_boot_deps_step.step);
     run_cmd.step.dependOn(&install_config_deps_step.step);
+
     run_cmd.step.dependOn(build_kernel_step);
+    
     run_cmd.step.dependOn(b.getInstallStep());
 
     const run_step = b.step("run", "Run the app");

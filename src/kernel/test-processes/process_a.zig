@@ -1,22 +1,14 @@
 const os = @import("root").os;
+const oslib = @import("oslib");
 
-const write = os.console_write("Process A");
+const write = os.console_write("ProcessA");
 
 pub fn init(_: ?*anyopaque) callconv(.C) isize {
+
     write.log("Hello, World from process A!", .{});
-    while (true) {
-        do_process();
-    }
+
+    _ = oslib.raw_system_call(0, 0, 0, 0, 0);
+    //_ = oslib.raw_system_call(1, 0, 0, 0, 0);
 
     return 0;
-}
-
-var counting: u64 = 0;
-pub fn do_process() void {
-    write.log("Processing A... {}", .{counting});
-    counting += 1;
-
-    write.log("Doing something...", .{});
-    write.log("Something more...", .{});
-    write.log("A bit more...", .{});
 }
