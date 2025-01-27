@@ -21,7 +21,7 @@ var current_task: ?*Task = null;
 var allocator: std.mem.Allocator = undefined;
 var default_context: TaskContext = undefined;
 
-var is_first_scheduing = false;
+var is_first_scheduing = true;
 
 const ProcessFunctionType = *const fn (?*anyopaque) callconv(.C) isize;
 
@@ -36,7 +36,8 @@ pub fn init() void {
 }
 
 pub fn run_process(taskName: [:0]u8, entry: ProcessFunctionType, args: ?*const anyopaque, argssize: usize) !void {
-    st.push(@src()); defer st.pop();
+    st.push(@src());
+    defer st.pop();
 
     write.dbg("Scheduing task \"{s}\" to be initialized...", .{taskName});
 
@@ -61,7 +62,8 @@ pub fn run_process(taskName: [:0]u8, entry: ProcessFunctionType, args: ?*const a
 }
 
 fn initialize_process(task: *Task) void {
-    st.push(@src()); defer st.pop();
+    st.push(@src());
+    defer st.pop();
 
     task.context = default_context;
 
@@ -83,7 +85,8 @@ fn initialize_process(task: *Task) void {
 }
 
 fn select_next_task() void {
-    st.push(@src()); defer st.pop();
+    st.push(@src());
+    defer st.pop();
 
     write.dbg("w: {}; r {}; i: {}", .{ to_initialize_list.items.len, task_list.items.len, task_idx });
 
@@ -101,10 +104,15 @@ fn select_next_task() void {
 }
 
 pub fn do_schedue(currContext: *TaskContext) void {
-    st.push(@src()); defer st.pop();
+    st.push(@src());
+    defer st.pop();
 
     write.dbg("Scheduing...", .{});
-    if (task_list.items.len == 0 and to_initialize_list.items.len == 0) no_task_in_queue();
+
+    if (task_list.items.len == 0 and to_initialize_list.items.len == 0) {
+        no_task_in_queue(currContext);
+        return;
+    }
 
     // save current context
     if (current_task) |cTask| {
@@ -112,7 +120,10 @@ pub fn do_schedue(currContext: *TaskContext) void {
         cTask.context = currContext.*;
         current_task = null;
         st.pop();
-    } else if (is_first_scheduing) default_context = currContext.*;
+    } else if (is_first_scheduing) {
+        default_context = currContext.*;
+        is_first_scheduing = false;
+    }
 
     // change task
     select_next_task();
@@ -127,8 +138,10 @@ pub fn do_schedue(currContext: *TaskContext) void {
     else currContext.* = default_context;
 }
 
-fn no_task_in_queue() void {
+fn no_task_in_queue(currContext: *TaskContext) void {
     write.dbg("Nothing to do!", .{});
+
+    currContext.* = default_context;
 }
 
 fn process_handler(funcPtr: usize, argsPtr: usize) callconv(.C) noreturn {
@@ -161,10 +174,6 @@ pub fn kill_current_process() noreturn {
     task_write.dbg("forcing schedue...", .{});
 
     st.pop();
-    asm volatile("int $0x20");
+    asm volatile ("int $0x20");
     unreachable;
-}
-
-pub fn kill_current_process_and_return() void {
-    
 }
