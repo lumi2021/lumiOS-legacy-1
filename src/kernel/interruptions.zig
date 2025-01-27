@@ -113,5 +113,5 @@ fn handle_timer_interrupt(frame: *InterruptFrame) void {
 }
 
 fn try_kill_process() void {
-    os.theading.schedue.kill_current_process();
+    os.theading.schedue.kill_current_process(-1);
 }

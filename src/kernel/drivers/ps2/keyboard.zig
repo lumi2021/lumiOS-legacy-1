@@ -11,7 +11,7 @@ const st = os.stack_tracer;
 const KeyboardState = @import("keyboard/state.zig");
 
 const kb = @import("keyboard/keyboard.zig");
-var kb_state: kb.state.KeyboardState = .{ .layout = .en_US_QWERTY };
+pub var kb_state: kb.state.KeyboardState = .{ .layout = .en_US_QWERTY };
 
 var keyboard_buffer_data: [8]u8 = undefined;
 var keyboard_buffer_elements: usize = 0;

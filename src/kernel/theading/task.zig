@@ -2,6 +2,7 @@ const std = @import("std");
 const os = @import("root").os;
 
 const TaskContext = os.theading.TaskContext;
+const taskResources = os.theading.taskResources;
 
 const write = os.console_write("Task");
 const st = os.stack_tracer;
@@ -23,16 +24,24 @@ pub const Task = struct {
 
     taskAllocator: std.heap.ArenaAllocator,
 
+    // task resources
+    input_context: ?*taskResources.inputContext.InputContextPool = null,
+
     pub fn allocate_new() *Task {
         st.push(@src());
         defer st.pop();
 
         const ptr = os.memory.allocator.create(Task) catch @panic("undefined error");
-        
+
         ptr.context = std.mem.zeroes(TaskContext);
         ptr.taskAllocator = std.heap.ArenaAllocator.init(os.memory.allocator);
 
         return ptr;
+    }
+
+    pub fn destry(self: *@This()) void {
+        if (self.input_context) |ctx|
+            @import("../drivers/ps2/keyboard/state.zig").clean_input_context(ctx);
     }
 
     pub fn alloc_stack(self: *@This()) !void {

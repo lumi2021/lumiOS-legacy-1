@@ -16,9 +16,12 @@ pub const debug_ignore: []const KeyValuePair = &[_]KeyValuePair{
     .{ .key = "Drivers", .value = ignore_all },
     .{ .key = "ps2", .value = ignore_all },
     .{ .key = "PCI", .value = ignore_all },
+
+    .{ .key = "Keyboard", .value = default },
+
     .{ .key = "Alloc", .value = ignore_all },
 
-    .{ .key = "ProcessA", .value = default }
+    .{ .key = "ProcessA", .value = default },
 };
 
 const KeyValuePair = struct { key: []const u8, value: u8 };

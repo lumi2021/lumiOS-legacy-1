@@ -16,7 +16,7 @@ var task_list: TaskList = undefined;
 var to_initialize_list: TaskList = undefined;
 
 var task_idx: usize = 0;
-var current_task: ?*Task = null;
+pub var current_task: ?*Task = null;
 
 var allocator: std.mem.Allocator = undefined;
 var default_context: TaskContext = undefined;
@@ -154,26 +154,34 @@ fn process_handler(funcPtr: usize, argsPtr: usize) callconv(.C) noreturn {
     // cleaning
     task_write.dbg("Finishing task... Status code: {}", .{res});
 
-    kill_current_process();
+    kill_current_process_noreturn(res);
 }
 
-pub fn kill_current_process() noreturn {
+pub fn kill_current_process_noreturn(status_code: isize) noreturn {
+    kill_current_process(status_code);
+
+    task_write.dbg("forcing schedue...", .{});
+
+    asm volatile ("int $0x20");
+    unreachable;
+}
+
+pub fn kill_current_process(status_code: isize) void {
     st.push(@src());
+
+    _ = status_code;
 
     if (current_task) |curr| {
         for (0.., task_list.items) |i, e| {
             if (e == curr) _ = task_list.orderedRemove(i);
         }
 
+        curr.destry();
         curr.taskAllocator.deinit();
 
         task_write.dbg("Task destroyed", .{});
     }
     current_task = null;
 
-    task_write.dbg("forcing schedue...", .{});
-
     st.pop();
-    asm volatile ("int $0x20");
-    unreachable;
 }

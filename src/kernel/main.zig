@@ -43,7 +43,7 @@ pub fn main(binfo: BootInfo) noreturn {
 
     st.pop();
     write.log("halting init thread...", .{});
-    
+
     while (true) sys.sys_flags.set_interrupt();
 }
 
@@ -127,6 +127,6 @@ pub fn panic(msg: []const u8, stack_trace: ?*builtin.StackTrace, return_address:
         }
     }
 
-    os.theading.schedue.kill_current_process();
+    os.theading.schedue.kill_current_process(-1);
     while (true) {}
 }
