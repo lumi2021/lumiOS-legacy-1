@@ -5,11 +5,11 @@ const log = os.console_write("keyboard state");
 
 const kb = @import("keyboard.zig");
 
-const PressedState = std.PackedIntArray(bool, @typeInfo(kb.keys.Location).Enum.fields.len);
+const PressedState = [@typeInfo(kb.keys.Location).@"enum".fields.len]bool;
 
 fn pressedStateInit() PressedState {
     @setEvalBranchQuota(99999999);
-    return PressedState.initAllTo(false);
+    return std.mem.zeroes(PressedState);
 }
 
 pub const KeyboardState = struct {
@@ -17,7 +17,7 @@ pub const KeyboardState = struct {
     layout: kb.layouts.KeyboardLayout,
 
     pub fn pressed(self: *const @This(), location: kb.keys.Location) bool {
-        return self.is_pressed.get(@intFromEnum(location));
+        return self.is_pressed[@intFromEnum(location)];
     }
 
     pub fn isShiftPressed(self: *const @This()) bool {
@@ -40,10 +40,10 @@ pub const KeyboardState = struct {
         const input = try kb.layouts.getInput(self, location, self.layout);
         switch (t) {
             .press => {
-                self.is_pressed.set(@intFromEnum(location), true);
+                self.is_pressed[@intFromEnum(location)] = true;
             },
             .release => {
-                self.is_pressed.set(@intFromEnum(location), false);
+                self.is_pressed[@intFromEnum(location)] = false;
             },
         }
 

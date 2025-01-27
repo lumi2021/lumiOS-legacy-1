@@ -118,7 +118,7 @@ pub fn alloc(len: usize) !usize {
     st.pop();
     return p;
 }
-fn alloc_impl(idx: usize) error{OutOfMemory} !usize {
+fn alloc_impl(idx: usize) error{OutOfMemory}!usize {
     st.push(@src());
 
     if (free_roots[idx] == 0) {
@@ -157,7 +157,8 @@ pub fn free(phys_addr: usize, len: usize) void {
     st.pop();
 }
 fn free_impl(phys_addr: usize, index: usize) void {
-    st.push(@src()); defer st.pop();
+    st.push(@src());
+    defer st.pop();
 
     ptr_from_paddr(*usize, phys_addr).* = free_roots[index];
     free_roots[index] = phys_addr;
@@ -167,7 +168,7 @@ pub inline fn vaddr_from_paddr(paddr: usize) usize {
     return paddr +% phys_mapping_base_unsigned;
 }
 pub inline fn ptr_from_paddr(Ptr: type, paddr: usize) Ptr {
-    if (@as(std.builtin.TypeId, @typeInfo(Ptr)) == .Optional and paddr == 0) return null;
+    if (@as(std.builtin.TypeId, @typeInfo(Ptr)) == .optional and paddr == 0) return null;
     return @ptrFromInt(vaddr_from_paddr(paddr));
 }
 

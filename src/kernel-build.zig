@@ -33,7 +33,7 @@ pub fn build_kernel(b: *Build) *Step {
 
     kernel.root_module.red_zone = false;
     kernel.entry = .disabled;
-    kernel.setLinkerScriptPath(b.path("deps/linking/linkScript.ld"));
+    kernel.setLinkerScript(b.path("deps/linking/linkScript.ld"));
 
     // dependences
     const oslib = b.addModule("oslib", .{
