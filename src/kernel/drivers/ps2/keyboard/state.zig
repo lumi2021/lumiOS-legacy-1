@@ -5,7 +5,7 @@ const log = os.console_write("keyboard state");
 
 const kb = @import("keyboard.zig");
 
-const PressedState = [@typeInfo(kb.keys.Location).@"enum".fields.len]bool;
+const PressedState = [@typeInfo(kb.keys.Location).Enum.fields.len]bool;
 
 const InputContext = os.theading.taskResources.inputContext;
 const InputCtxList = std.ArrayList(*InputContext.InputContextPool);
