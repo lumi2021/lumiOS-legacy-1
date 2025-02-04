@@ -6,6 +6,7 @@ const write = os.console_write("syscall");
 const st = os.stack_tracer;
 
 const schedue = os.theading.schedue;
+const filesys = os.filesys;
 
 const TaskContext = os.theading.TaskContext;
 
@@ -19,7 +20,7 @@ pub fn init() !void {
     inline for (0..255) |i| syscalls[i] = unhandled_syscall;
 
     syscalls[0x00] = syscall_00_kill_current_process;
-    syscalls[0x01] = syscall_01_request_event_pool_context;
+    syscalls[0x01] = syscall_01_open_file_descriptor;
 }
 
 pub fn syscall_interrupt(context: *TaskContext) void {
@@ -40,6 +41,11 @@ fn syscall_00_kill_current_process(a: u64, _: u64, _: u64, _: u64) u64 {
     return 0;
 }
 
-fn syscall_01_request_event_pool_context(_: u64, _: u64, _: u64, _: u64) u64 {
-    return 0;
+fn syscall_01_open_file_descriptor(path_ptr: u64, flags: u64, _: u64, _: u64) u64 {
+    const str_buf: [*:0]u8 = @ptrFromInt(path_ptr);
+    var str_len: usize = 0;
+    while (str_buf[str_len] != 0) : (str_len += 1) {}
+    const str: [:0]u8 = str_buf[0..str_len:0];
+
+    return @bitCast(filesys.open_file_descriptor(str, @bitCast(flags)));
 }
