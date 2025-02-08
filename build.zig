@@ -3,6 +3,7 @@ const Build = std.Build;
 const Target = std.Target;
 
 const kernel_build = @import("src/kernel-build.zig");
+const programs_build = @import("src/programs-build.zig");
 
 pub fn build(b: *Build) void {
     b.exe_dir = "zig-out/";
@@ -11,6 +12,7 @@ pub fn build(b: *Build) void {
     const install_config_deps_step = b.addInstallFile(b.path("deps/boot/limine_config.txt"), "limine.conf");
 
     const build_kernel_step = kernel_build.build_kernel(b);
+    const build_programs_step = programs_build.build_all(b);
 
     const run_cmd = b.addSystemCommand(&.{
         "qemu-system-x86_64",
@@ -50,6 +52,7 @@ pub fn build(b: *Build) void {
     run_cmd.step.dependOn(&install_config_deps_step.step);
 
     run_cmd.step.dependOn(build_kernel_step);
+    run_cmd.step.dependOn(build_programs_step);
     
     run_cmd.step.dependOn(b.getInstallStep());
 
