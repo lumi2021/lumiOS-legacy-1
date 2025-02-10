@@ -23,7 +23,7 @@ pub fn build(b: *Build) void {
 
         // HD, serial, video, etc
         "-hdd",
-        "fat:rw:zig-out",
+        "raw:rw:zig-out",
 
         "-serial",
         "mon:stdio",

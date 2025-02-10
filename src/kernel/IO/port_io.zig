@@ -21,7 +21,7 @@ pub fn inb(port: u16) u8 {
         : [port] "N{dx}" (port),
     );
 }
-fn inw(port: u16) u16 {
+pub fn inw(port: u16) u16 {
     return asm volatile ("inw %[port], %[result]\n\t"
         : [result] "={ax}" (-> u16),
         : [port] "N{dx}" (port),
