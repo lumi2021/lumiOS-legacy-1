@@ -1,5 +1,5 @@
 /.vscode
 /build.zig.zon
-/.zig-cache
-/zig-out
+/**/.zig-cache
+/**/zig-out
 log.txt
