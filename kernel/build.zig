@@ -3,7 +3,7 @@ const Build = std.Build;
 const Target = std.Target;
 const Step = Build.Step;
 
-pub fn build_kernel(b: *Build) *Step {
+pub fn build(b: *Build) void {
     var kernel_query = Target.Query{
         .cpu_arch = .x86_64,
         .os_tag = .freestanding,
@@ -22,8 +22,8 @@ pub fn build_kernel(b: *Build) *Step {
     const optimize = b.standardOptimizeOption(.{ .preferred_optimize_mode = .ReleaseSmall });
 
     const kernel = b.addExecutable(.{
-        .name = "kernelx64",
-        .root_source_file = b.path("src/kernel/main.zig"),
+        .name = "kernel",
+        .root_source_file = b.path("src/main.zig"),
         .target = b.resolveTargetQuery(kernel_query),
         .optimize = optimize,
         .code_model = .kernel
@@ -31,21 +31,13 @@ pub fn build_kernel(b: *Build) *Step {
 
     kernel.root_module.red_zone = false;
     kernel.entry = .disabled;
-    kernel.setLinkerScript(b.path("deps/linking/linkScript.ld"));
+    kernel.setLinkerScript(b.path("../deps/linking/linkScript.ld"));
 
     // dependences
-    const oslib = b.addModule("oslib", .{
-        .root_source_file = b.path("src/oslib/oslib.zig")
-    });
+    const oslib = b.dependency("oslib", .{}).module("oslib");
     kernel.root_module.addImport("oslib", oslib);
 
     // steps
     const install_kernel_step = b.addInstallArtifact(kernel, .{});
-
-    var kernel_build_step = b.step("Build kernel",
-    "Build the kernel");
-
-    kernel_build_step.dependOn(&install_kernel_step.step);
-
-    return kernel_build_step;
+    b.getInstallStep().dependOn(&install_kernel_step.step);
 }
