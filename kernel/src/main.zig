@@ -115,15 +115,10 @@ pub fn panic(msg: []const u8, stack_trace: ?*builtin.StackTrace, return_address:
     const stk = st.get_stack_trace();
 
     if (stk.len < 1024) {
-        panic_write.log("Stack Trace:", .{});
+        panic_write.log("Stack Trace ({}):", .{ stk.len });
 
         for (stk) |i| {
-            panic_write.log("- {s}", .{i});
-        }
-    } else {
-        panic_write.log("last 5:", .{});
-        for ((1024 - 5)..stk.len) |i| {
-            panic_write.log("- {s}", .{stk[i]});
+            panic_write.log(" - {s}", .{i});
         }
     }
 

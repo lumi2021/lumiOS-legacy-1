@@ -10,5 +10,10 @@ pub const FileAccessFlags = packed struct(u64) {
 };
 
 pub fn open(path: [:0]u8, flags: FileAccessFlags) i64 {
-    return @bitCast(oslib.raw_system_call(1, @intFromPtr(path.ptr), @bitCast(flags), 0, 0));
+    return @bitCast(oslib.raw_system_call(
+        .open_file_descriptor,
+        @intFromPtr(path.ptr),
+        @bitCast(flags),
+        0, 0
+    ));
 }

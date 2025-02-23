@@ -12,6 +12,7 @@ pub const debug_ignore: []const KeyValuePair = &[_]KeyValuePair{
     .{ .key = "IDTM", .value = ignore_all },
     .{ .key = "Paging", .value = ignore_all },
     .{ .key = "Schedue", .value = ignore_all },
+    .{ .key = "Stack Tracer", .value = ignore_all },
 
     .{ .key = "Drivers", .value = ignore_all },
     .{ .key = "ps2", .value = ignore_all },

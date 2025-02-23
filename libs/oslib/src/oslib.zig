@@ -1,8 +1,11 @@
+pub const SystemCall = @import("syscalls_list.zig").SysCalls;
+
 pub const process = @import("process.zig");
 pub const file = @import("file.zig");
+pub const debug = @import("debug.zig");
 
-pub fn raw_system_call(A: usize, B: usize, C: usize, D: usize, E: usize) usize {
-    // FIXME support only fo intel
+pub fn raw_system_call(A: SystemCall, B: usize, C: usize, D: usize, E: usize) usize {
+    // FIXME support only for intel
 
     var result: u64 = undefined;
 

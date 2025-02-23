@@ -20,6 +20,9 @@ pub const Task = struct {
     stack: []u8,
     stack_pointer: usize,
 
+    stack_trace: [1024][128]u8,
+    stack_trace_count: u16,
+
     context: TaskContext,
 
     taskAllocator: std.heap.ArenaAllocator,
@@ -32,6 +35,14 @@ pub const Task = struct {
         defer st.pop();
 
         const ptr = os.memory.allocator.create(Task) catch @panic("undefined error");
+
+        ptr.stack_trace = undefined;
+        ptr.stack_trace_count = 3;
+
+        // Dummy task entries
+        ptr.stack_trace[0] = @constCast("*Interrupt 20 (32)" ++ [1]u8{0} ** 110).*;
+        ptr.stack_trace[1] = @constCast("kernel/src/interruptions.zig:handle_timer_interrupt l.xxx" ++ [1]u8{0} ** 71).*;
+        ptr.stack_trace[2] = @constCast("kernel/src/theading/schedue.zig:do_schedue l.xxx" ++ [1]u8{0} ** 80).*;
 
         ptr.context = std.mem.zeroes(TaskContext);
         ptr.taskAllocator = std.heap.ArenaAllocator.init(os.memory.allocator);

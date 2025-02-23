@@ -85,8 +85,8 @@ fn initialize_process(task: *Task) void {
 }
 
 fn select_next_task() void {
-    st.push(@src());
-    defer st.pop();
+    //st.push(@src());
+    //defer st.pop();
 
     write.dbg("w: {}; r {}; i: {}", .{ to_initialize_list.items.len, task_list.items.len, task_idx });
 
@@ -118,8 +118,8 @@ pub fn do_schedue(currContext: *TaskContext) void {
     if (current_task) |cTask| {
         write.dbg("Pausing task \"{s}\"...", .{cTask.task_name});
         cTask.context = currContext.*;
+        st.save_task_stack_trace(cTask);
         current_task = null;
-        st.pop();
     } else if (is_first_scheduing) {
         default_context = currContext.*;
         is_first_scheduing = false;
@@ -132,10 +132,12 @@ pub fn do_schedue(currContext: *TaskContext) void {
     if (current_task) |cTask| {
         write.dbg("Loading task \"{s}\"...", .{cTask.task_name});
         currContext.* = cTask.context;
-        st.push_process(cTask.task_name);
+        st.load_task_stack_trace(cTask);
     }
     // fallback to let it on hold
     else currContext.* = default_context;
+
+    write.dbg("hit", .{});
 }
 
 fn no_task_in_queue(currContext: *TaskContext) void {
@@ -149,15 +151,19 @@ fn process_handler(funcPtr: usize, argsPtr: usize) callconv(.C) noreturn {
     const args: ?*anyopaque = @ptrFromInt(argsPtr);
 
     // calling
+    st.push_process(@constCast("__start"));
     const res = entry(args);
 
     // cleaning
     task_write.dbg("Finishing task... Status code: {}", .{res});
 
+    st.pop();
     kill_current_process_noreturn(res);
 }
 
 pub fn kill_current_process_noreturn(status_code: isize) noreturn {
+    st.push(@src()); defer st.pop();
+    
     kill_current_process(status_code);
 
     task_write.dbg("forcing schedue...", .{});
@@ -167,7 +173,7 @@ pub fn kill_current_process_noreturn(status_code: isize) noreturn {
 }
 
 pub fn kill_current_process(status_code: isize) void {
-    st.push(@src());
+    st.push(@src()); defer st.pop();
 
     _ = status_code;
 
@@ -182,6 +188,4 @@ pub fn kill_current_process(status_code: isize) void {
         task_write.dbg("Task destroyed", .{});
     }
     current_task = null;
-
-    st.pop();
 }

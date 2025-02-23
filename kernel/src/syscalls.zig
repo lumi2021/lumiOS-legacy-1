@@ -20,7 +20,8 @@ pub fn init() !void {
     inline for (0..255) |i| syscalls[i] = unhandled_syscall;
 
     syscalls[0x00] = syscall_00_kill_current_process;
-    syscalls[0x01] = syscall_01_open_file_descriptor;
+    syscalls[0x01] = syscall_01_print_stdout;
+    syscalls[0x02] = syscall_02_open_file_descriptor;
 }
 
 pub fn syscall_interrupt(context: *TaskContext) void {
@@ -36,12 +37,24 @@ fn unhandled_syscall(_: u64, _: u64, _: u64, _: u64) u64 {
     return 0;
 }
 
+
 fn syscall_00_kill_current_process(a: u64, _: u64, _: u64, _: u64) u64 {
     schedue.kill_current_process(@bitCast(a));
     return 0;
 }
 
-fn syscall_01_open_file_descriptor(path_ptr: u64, flags: u64, _: u64, _: u64) u64 {
+fn syscall_01_print_stdout(message: u64, _: u64, _: u64, _: u64) u64 {
+    const str_buf: [*:0]u8 = @ptrFromInt(message);
+    var str_len: usize = 0;
+    while (str_buf[str_len] != 0) : (str_len += 1) {}
+    const str: [:0]u8 = str_buf[0..str_len:0];
+
+    os.uart.uart_puts(str);
+
+    return 0;
+}
+
+fn syscall_02_open_file_descriptor(path_ptr: u64, flags: u64, _: u64, _: u64) u64 {
     const str_buf: [*:0]u8 = @ptrFromInt(path_ptr);
     var str_len: usize = 0;
     while (str_buf[str_len] != 0) : (str_len += 1) {}

@@ -34,6 +34,13 @@ pub fn write(comptime tag: []const u8) type {
                 printf("[" ++ tag ++ " error] " ++ fmt ++ "\r\n", args);
             }
         }.f;
+
+        pub const raw = struct {
+            pub inline fn f(comptime fmt: []const u8, args: anytype) void {
+                if (isLogDisabled(tag)) return;
+                printf(fmt, args);
+            }
+        }.f;
     };
 }
 

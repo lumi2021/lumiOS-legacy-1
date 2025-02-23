@@ -1,9 +1,12 @@
+const os = @import("root").os;
 const std = @import("std");
 const SourceLocation = std.builtin.SourceLocation;
 
 var stack_trace: [1024][128]u8 = undefined;
 var clean_buf: [128]u8 = undefined;
 var stack_trace_count: u16 = 0;
+
+const write = os.console_write("Stack Tracer");
 
 pub var enabled: bool = true;
 
@@ -41,4 +44,19 @@ pub fn pop() void {
 
 pub fn get_stack_trace() [][128]u8 {
     return stack_trace[0..stack_trace_count];
+}
+
+pub fn save_task_stack_trace(task: *os.theading.Task) void {
+
+    write.dbg("Saving stack trace from {s} ({} itens)", .{ task.task_name, task.stack_trace_count });
+    task.stack_trace = stack_trace;
+    task.stack_trace_count = stack_trace_count;
+
+}
+pub fn load_task_stack_trace(task: *os.theading.Task) void {
+
+    write.dbg("Loading stack trace from {s} ({} itens)", .{ task.task_name, task.stack_trace_count });
+    stack_trace = task.stack_trace;
+    stack_trace_count = task.stack_trace_count;
+
 }

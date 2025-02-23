@@ -44,6 +44,7 @@ pub fn build(b: *Build) void {
         
         "-M", "q35",
         "-bios", "deps/debug/OVMF.fd",
+        "-m", "256M",
 
         // serial, video, etc
 
@@ -53,7 +54,8 @@ pub fn build(b: *Build) void {
         "-display", "gtk",
 
         // Aditional devices
-
+        "-device", "ahci,id=ahci",
+        "-device", "ide-hd,drive=hdd,bus=ahci.0",
 
         // Debug
         "-D", "log.txt",
@@ -62,11 +64,10 @@ pub fn build(b: *Build) void {
         "--no-shutdown",
         "-s",
         //"-trace", "*xhci*",
-        //"-m", "256M",
 
-        // Image
-        "-drive", "file=zig-out/lumiOS.iso,format=raw,media=cdrom",
-        "-boot", "d"
+        // Disk
+        //"-hdd", "fat:rw:zig-out/.disk"
+        "-drive", "id=hdd,file=zig-out/lumiOS.iso,format=raw,if=none",
     });
 
     geneate_img_cmd.step.dependOn(install_bootloadr_step);

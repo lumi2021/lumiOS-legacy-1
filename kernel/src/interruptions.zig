@@ -31,10 +31,23 @@ pub fn handle_divide_by_zero(_: *InterruptFrame) void {
     try_kill_process();
 }
 
-pub fn handle_invalid_opcode(_: *InterruptFrame) void {
+pub fn handle_invalid_opcode(frame: *InterruptFrame) void {
     st.push(@src());
 
     write.err("Invalid OpCode!", .{});
+
+    if (frame.rip > 0xF000000000000000) {
+        const opCode1 = @as(*u8, @ptrFromInt(frame.rip)).*;
+        const opCode2 = @as(*u8, @ptrFromInt(frame.rip + 1)).*;
+        const opCode3 = @as(*u8, @ptrFromInt(frame.rip + 2)).*;
+        const opCode4 = @as(*u8, @ptrFromInt(frame.rip + 3)).*;
+        write.err("Op Code: {X:0>2} {X:0>2} {X:0>2} {X:0>2}", .{ opCode1, opCode2, opCode3, opCode4 });
+
+        //if (opCode1 == 0x48 and opCode2 == 0xCF) {
+        //    const rsp: [*]u64 = @ptrFromInt(frame.rip);
+        //    write.err("Stack: {X:0>16} {X:0>16} {X:0>16} {X:0>16} {X:0>16}", .{ rsp[0], rsp[1], rsp[2], rsp[3], rsp[4] });
+        //}
+    }
 
     try_kill_process();
 }
@@ -80,6 +93,8 @@ pub fn handle_general_protection(frame: *InterruptFrame) void {
 
 pub fn handle_page_fault(frame: *InterruptFrame) void {
     st.push(@src());
+
+    write.err("Page Fault!", .{});
 
     var addr: u64 = undefined;
     asm volatile ("mov %CR2, %[add]"
