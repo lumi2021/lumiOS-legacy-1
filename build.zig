@@ -14,6 +14,7 @@ pub fn build(b: *Build) void {
     const install_bootloadr_step = b.step("install bootloader", "");
     install_bootloadr_step.dependOn(&b.addInstallFile(b.path("deps/boot/limine_bootloaderx64.EFI"), ".disk/EFI/BOOT/BOOTX64.EFI").step);
     install_bootloadr_step.dependOn(&b.addInstallFile(b.path("deps/boot/limine_config.txt"), ".disk/limine.conf").step);
+    install_bootloadr_step.dependOn(&b.addInstallFile(b.path("deps/boot/limine-uefi-cd.bin"), ".disk/boot/limine/limine-uefi-cd.bin").step);
 
     // kernel
     const kernel_dep = b.dependency("kernel", .{});
@@ -24,10 +25,19 @@ pub fn build(b: *Build) void {
     const geneate_img_cmd = b.addSystemCommand(&.{
         "xorriso",
         "-as", "mkisofs",
-        "-o", "zig-out/lumiOS.iso",
         "-R",
-        "-J",
+
+        "-no-emul-boot",
+        "-boot-load-size", "4",
+        "-boot-info-table",
+        "-efi-boot-part",
+        "--efi-boot-image",
+        "--protective-msdos-label",
+
+        "--efi-boot", "boot/limine/limine-uefi-cd.bin",
+
         "zig-out/.disk/",
+        "-o", "zig-out/lumiOS.iso",
     });
     const run_cmd = b.addSystemCommand(&.{
         "qemu-system-x86_64",
