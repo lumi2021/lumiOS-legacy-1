@@ -13,11 +13,20 @@ pub inline fn read_sector(sector: u32, buffer: *[512]u8) void {
 fn ata_read_sector(lba: u32, buffer: *[512]u8) void {
     st.push(@src()); defer st.pop();
 
+    // Test 32-bits
+    const test_value: u8 = 0xAA;
+    ports.outb(primary_io + 1, test_value);
+    const read_value = ports.inb(primary_io + 1);
+
+    if (read_value == test_value) {
+        write.log("Disco suporta acesso de 32 bits", .{});
+    } else {
+        write.log("Disco suporta apenas acesso de 16 bits", .{});
+    }
+
+
     // Wait if not ready
     ata_await();
-
-    // Select disk 0
-    ports.outb(primary_io + 6, 0xe0 | (0<<4));
 
     // Select driver (master) and LBA high bits
     ports.outb(primary_io + 6, @intCast(0xE0 | ((lba >> 24) & 0x0F)));
@@ -52,5 +61,9 @@ fn ata_read_sector(lba: u32, buffer: *[512]u8) void {
 
 inline fn ata_await() void {
     st.push(@src()); defer st.pop();
-    while ((ports.inb(primary_io + 7) & 0x88) == 0x08) {}
+    while ((status() & 0x88) == 0x00) {}
+}
+
+inline fn status() u8 {
+    return ports.inb(primary_io + 7);
 }
