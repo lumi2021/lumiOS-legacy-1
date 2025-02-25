@@ -66,8 +66,6 @@ const BarInfo = struct {
 pub fn init() !void {
     st.push(@src());
 
-    xhci.init();
-
     write.log("Scanning bus root...", .{});
     bus_scan(0);
     write.log("Scan complete!", .{});
@@ -119,30 +117,31 @@ pub fn function_scan(addr: Addr) void {
 
     switch (addr.base_class().read()) {
         else => {
-            write.log("Unknown class!", .{});
+            write.log(" - Unknown class!", .{});
         },
         0x00 => {
             switch (addr.sub_class().read()) {
                 else => {
-                    write.log("Unknown unclassified device!", .{});
+                    write.log(" - Unknown unclassified device!", .{});
                 },
             }
         },
         0x01 => {
             switch (addr.sub_class().read()) {
                 else => {
-                    write.log("Unknown storage controller!", .{});
+                    write.log(" - Unknown storage controller!", .{});
                 },
                 0x06 => {
-                    write.log("AHCI controller", .{});
+                    write.log(" - AHCI controller", .{});
+                    os.drivers.disk.register_SATA_drive(addr);
                 },
                 0x08 => {
                     switch (addr.prog_if().read()) {
                         else => {
-                            write.log("Unknown non-volatile memory controller!", .{});
+                            write.log(" - Unknown non-volatile memory controller!", .{});
                         },
                         0x02 => {
-                            write.log("NVMe controller", .{});
+                            write.log(" - NVMe controller", .{});
                         },
                     }
                 },
@@ -151,17 +150,17 @@ pub fn function_scan(addr: Addr) void {
         0x02 => {
             switch (addr.sub_class().read()) {
                 else => {
-                    write.log("Unknown network controller!", .{});
+                    write.log(" - Unknown network controller!", .{});
                 },
                 0x00 => {
                     if (addr.vendor_id().read() == 0x8086 and addr.device_id().read() == 0x100E) {
-                        write.log("E1000 controller", .{});
+                        write.log(" - E1000 controller", .{});
                     } else {
-                        write.log("Unknown ethernet controller", .{});
+                        write.log(" - Unknown ethernet controller", .{});
                     }
                 },
                 0x80 => {
-                    write.log("Other network controller", .{});
+                    write.log(" - Other network controller", .{});
                 },
             }
         },
@@ -170,36 +169,36 @@ pub fn function_scan(addr: Addr) void {
                 write.log("Virtio display controller", .{});
             } else switch (addr.sub_class().read()) {
                 else => {
-                    write.log("Unknown display controller!", .{});
+                    write.log(" - Unknown display controller!", .{});
                 },
                 0x00 => {
-                    write.log("VGA compatible controller", .{});
+                    write.log(" - VGA compatible controller", .{});
                 },
             }
         },
         0x04 => {
             switch (addr.sub_class().read()) {
                 else => {
-                    write.log("Unknown multimedia controller!", .{});
+                    write.log(" - Unknown multimedia controller!", .{});
                 },
                 0x03 => {
-                    write.log("Audio device", .{});
+                    write.log(" - Audio device", .{});
                 },
             }
         },
         0x06 => {
             switch (addr.sub_class().read()) {
                 else => {
-                    write.log("Unknown bridge device!", .{});
+                    write.log(" - Unknown bridge device!", .{});
                 },
                 0x00 => {
-                    write.log("Host bridge", .{});
+                    write.log(" - Host bridge", .{});
                 },
                 0x01 => {
-                    write.log("ISA bridge", .{});
+                    write.log(" - ISA bridge", .{});
                 },
                 0x04 => {
-                    write.log("PCI-to-PCI bridge", .{});
+                    write.log(" - PCI-to-PCI bridge", .{});
                     if ((addr.header_type().read() & 0x7F) != 0x01) {
                         write.log("Not PCI-to-PCI bridge header type!", .{});
                     } else {
@@ -213,18 +212,18 @@ pub fn function_scan(addr: Addr) void {
         0x0c => {
             switch (addr.sub_class().read()) {
                 else => {
-                    write.log("Unknown serial bus controller!", .{});
+                    write.log(" - Unknown serial bus controller!", .{});
                 },
                 0x03 => {
                     switch (addr.prog_if().read()) {
                         else => {
-                            write.log("Unknown USB controller!", .{});
+                            write.log(" - Unknown USB controller!", .{});
                         },
                         0x20 => {
-                            write.log("USB2 EHCI controller", .{});
+                            write.log(" - USB2 EHCI controller", .{});
                         },
                         0x30 => {
-                            write.log("USB3 XHCI controller", .{});
+                            write.log(" - USB3 XHCI controller", .{});
                             xhci.register_device(addr);
                         },
                     }

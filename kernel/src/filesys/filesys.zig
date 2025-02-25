@@ -2,8 +2,9 @@ const std = @import("std");
 const root = @import("root");
 const os = root.os;
 
-const devices = @import("devices/devices.zig");
 const FAT = @import("formats/FAT.zig");
+
+const disk = os.drivers.disk;
 
 const write = os.console_write("filesys");
 const st = os.stack_tracer;
@@ -35,7 +36,7 @@ pub fn open_file_descriptor(path: [:0]u8, flags: FileAccessFlags) i64 {
     }
 
     var sector: [512]u8 = undefined;
-    devices.disk.read_sector(0, &sector);
+    disk.read_sector(0, &sector);
 
     const bpb: *align(1) FAT.BPB = @ptrCast(sector[0..256]);
 

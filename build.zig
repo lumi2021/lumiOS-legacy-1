@@ -55,7 +55,7 @@ pub fn build(b: *Build) void {
 
         // Aditional devices
         "-device", "ahci,id=ahci",
-        "-device", "ide-hd,drive=hdd,bus=ahci.0",
+        "-device", "ide-hd,drive=drive0,bus=ahci.0",
 
         // Debug
         "-D", "log.txt",
@@ -67,7 +67,7 @@ pub fn build(b: *Build) void {
 
         // Disk
         //"-hdd", "fat:rw:zig-out/.disk"
-        "-drive", "id=hdd,file=zig-out/lumiOS.iso,format=raw,if=none",
+        "-drive", "id=drive0,file=zig-out/lumiOS.iso,format=raw,if=none",
     });
 
     geneate_img_cmd.step.dependOn(install_bootloadr_step);
