@@ -33,9 +33,14 @@ pub fn main(binfo: BootInfo) noreturn {
     write.log("# Starting drivers...", .{});
     os.drivers.init_all_drivers() catch |err| @panic(@errorName(err));
 
-    //write.log("# Starting startup programs...", .{});
+    write.log("# Starting startup programs...", .{});
     os.theading.run_process(@constCast("Process A"), @import("test-processes/process_a.zig").init, null, 0) catch @panic("Cannot initialize process");
     //os.theading.run_process(@constCast("Process B"), @import("test-processes/process_b.zig").init, null, 0) catch @panic("Cannot initialize process");
+
+    write.log("# Starting basic graphics...", .{});
+    os.GL.init(binfo.framebuffer);
+
+    os.GL.clear();
 
     write.log("# Starting schedue...", .{});
     setup_pic();
@@ -115,7 +120,7 @@ pub fn panic(msg: []const u8, stack_trace: ?*builtin.StackTrace, return_address:
     const stk = st.get_stack_trace();
 
     if (stk.len < 1024) {
-        panic_write.log("Stack Trace ({}):", .{ stk.len });
+        panic_write.log("Stack Trace ({}):", .{stk.len});
 
         for (stk) |i| {
             panic_write.log(" - {s}", .{i});

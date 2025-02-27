@@ -25,4 +25,10 @@ pub const RegionType = enum(u64) {
     framebuffer = 7,
 };
 
-pub const FrameBuffer = extern struct { framebuffer: [*]u8, size: usize, width: u64, height: u64, pixels_per_scan_line: u64 };
+pub const FrameBuffer = extern struct {
+    framebuffer: [*]u8,
+    size: usize,
+    width: u64,
+    height: u64,
+    pixels_per_scan_line: u64,
+};

@@ -4,6 +4,8 @@ pub const console_write = @import("IO/debug.zig").write;
 
 pub const boot_info = @import("boot/boot_info.zig");
 
+pub const GL = @import("GL/GL.zig");
+
 pub const system = @import("system/system.zig");
 pub const theading = @import("theading/theading.zig");
 

@@ -15,6 +15,7 @@ pub const ResourceHandlerData_IO = struct {
 
 pub const ResourceHandlerData_File = struct {
     path: []u8,
+    cursor: usize,
 
     // access flags
     read: bool,
