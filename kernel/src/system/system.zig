@@ -2,6 +2,8 @@ pub const arch = @import("builtin").target.cpu.arch;
 
 pub const interrupt_manager = @import("idtm.zig");
 
+pub const ResourceHandler = @import("handlers.zig").ResourceHandler;
+
 pub const sys_flags = switch (arch) {
     .x86_64 => @import("x86_64/asm_flags.zig"),
     .aarch64 => @import("arm64/asm_flags.zig"),

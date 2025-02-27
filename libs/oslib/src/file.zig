@@ -17,3 +17,7 @@ pub fn open(path: [:0]u8, flags: FileAccessFlags) i64 {
         0, 0
     ));
 }
+
+pub fn close(descriptor: i64) void {
+    _ = oslib.raw_system_call(.close_file_descriptor, @bitCast(descriptor), 0, 0, 0);
+}

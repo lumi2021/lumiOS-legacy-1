@@ -6,7 +6,7 @@ pub const input = .{
 pub const max_ioapics = 5;
 
 pub const debug_ignore: []const KeyValuePair = &[_]KeyValuePair{
-    .{ .key = "Main", .value = default },
+    .{ .key = "Main", .value = ignore_all },
     .{ .key = "PMM", .value = ignore_all },
     .{ .key = "VMM", .value = ignore_all },
     .{ .key = "IDTM", .value = ignore_all },
@@ -14,9 +14,10 @@ pub const debug_ignore: []const KeyValuePair = &[_]KeyValuePair{
     .{ .key = "Schedue", .value = ignore_all },
     .{ .key = "Stack Tracer", .value = ignore_all },
 
+    // Drivers related
     .{ .key = "Drivers", .value = ignore_all },
     .{ .key = "ps2", .value = ignore_all },
-    .{ .key = "PCI", .value = default },
+    .{ .key = "PCI", .value = ignore_all },
 
     .{ .key = "Keyboard", .value = default },
 

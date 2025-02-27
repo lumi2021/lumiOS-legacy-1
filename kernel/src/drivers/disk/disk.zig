@@ -11,10 +11,10 @@ const write = os.console_write("Disk");
 const st = os.stack_tracer;
 
 const DiskList = std.ArrayList(Disk);
-const disk_list: DiskList = undefined;
+var disk_list: DiskList = undefined;
 
 pub fn init() void {
-    disk_list = DiskList.init(os.memory.allocator.*);
+    disk_list = DiskList.init(os.memory.allocator);
 }
 
 // Registers

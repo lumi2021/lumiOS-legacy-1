@@ -21,7 +21,9 @@ pub fn init() !void {
 
     syscalls[0x00] = syscall_00_kill_current_process;
     syscalls[0x01] = syscall_01_print_stdout;
+    
     syscalls[0x02] = syscall_02_open_file_descriptor;
+    syscalls[0x03] = syscall_02_close_file_descriptor;
 }
 
 pub fn syscall_interrupt(context: *TaskContext) void {
@@ -61,4 +63,9 @@ fn syscall_02_open_file_descriptor(path_ptr: u64, flags: u64, _: u64, _: u64) u6
     const str: [:0]u8 = str_buf[0..str_len:0];
 
     return @bitCast(filesys.open_file_descriptor(str, @bitCast(flags)));
+}
+
+fn syscall_02_close_file_descriptor(handler: u64, _: u64, _: u64, _: u64) u64 {
+    filesys.close_file_descriptor(handler);
+    return 0;
 }

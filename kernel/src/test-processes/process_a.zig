@@ -17,6 +17,10 @@ pub fn init(_: ?*anyopaque) callconv(.C) isize {
     const b = oslib.file.open(path2, .{ .read = true });
     oslib.debug.print("File descriptors: {}, {}\n", .{a, b});
 
+    oslib.debug.print("Closing files...\n", .{});
+    oslib.file.close(a);
+    oslib.file.close(b);
+
     oslib.debug.print("Terminating...\n", .{});
     oslib.process.terminate_process(2);
 }
