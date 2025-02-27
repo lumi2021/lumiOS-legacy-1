@@ -1,13 +1,16 @@
 const FrameBuffer = @import("../boot/boot_info.zig").FrameBuffer;
 
+pub const text = @import("text/text.zig");
+pub const image = @import("image/image.zig");
+
 var framebuffer_data: FrameBuffer = undefined;
-var frameBuffer: []u24 = undefined;
+pub var frameBuffer: []u24 = undefined;
 
-var canvasPPS: usize = 0;
-var canvasWidth: usize = 0;
-var canvasHeight: usize = 0;
+pub var canvasPPS: usize = 0;
+pub var canvasWidth: usize = 0;
+pub var canvasHeight: usize = 0;
 
-pub var clear_color: u24 = 0xFDFDFD;
+pub var clear_color: u24 = 0x282A36;
 
 pub fn init(fb: FrameBuffer) void {
     framebuffer_data = fb;

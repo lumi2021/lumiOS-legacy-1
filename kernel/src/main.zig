@@ -8,9 +8,7 @@ const io = os.port_io;
 
 pub var boot_info: BootInfo = undefined;
 
-comptime {
-    _ = @import("boot/boot_entry.zig");
-}
+comptime { _ = @import("boot/boot_entry.zig"); }
 
 const write = os.console_write("Main");
 const st = os.stack_tracer;
@@ -20,8 +18,22 @@ pub fn main(binfo: BootInfo) noreturn {
 
     st.push(@src());
 
-    os.uart.uart_initialize();
-    write.log("Hello, World from {s}!", .{@tagName(os.system.arch)});
+    write.log("# Starting basic graphics...", .{});
+    {
+        os.GL.init(binfo.framebuffer);
+        os.GL.clear();
+
+        const centerX = (os.GL.canvasWidth / 2 - (32 * 7) / 2);
+        const centerY = (os.GL.canvasHeight / 2 - 54 / 2);
+        const centerX2 = (os.GL.canvasWidth / 2 - (16 * 7) / 2);
+        const centerY2 = (os.GL.canvasHeight / 2 - 27 / 2);
+
+        os.GL.text.drawBigString("LUMI OS", centerX, centerY);
+        os.GL.text.drawString(" 0.1.0 ", centerX2, centerY2 + 40);
+
+        os.uart.uart_initialize();
+        write.log("Hello, World from {s}!", .{@tagName(os.system.arch)});
+    }
 
     write.log("# Starting setup routine...", .{});
     sys.sys_flags.clear_interrupt();
@@ -36,9 +48,6 @@ pub fn main(binfo: BootInfo) noreturn {
     write.log("# Starting startup programs...", .{});
     os.theading.run_process(@constCast("Process A"), @import("test-processes/process_a.zig").init, null, 0) catch @panic("Cannot initialize process");
     //os.theading.run_process(@constCast("Process B"), @import("test-processes/process_b.zig").init, null, 0) catch @panic("Cannot initialize process");
-
-    write.log("# Starting basic graphics...", .{});
-    os.GL.init(binfo.framebuffer);
 
     os.GL.clear();
 
