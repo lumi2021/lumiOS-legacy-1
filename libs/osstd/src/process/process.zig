@@ -1,4 +1,4 @@
-const root = @import("oslib.zig");
+const root = @import("root");
 const raw_system_call = root.raw_system_call;
 
 pub fn terminate_process(status: isize) noreturn {

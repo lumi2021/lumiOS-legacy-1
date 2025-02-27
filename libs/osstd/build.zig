@@ -2,7 +2,6 @@ const std = @import("std");
 const Build = std.Build;
 
 pub fn build(b: *Build) void {
-
     var target_query = std.Target.Query{
         .cpu_arch = .x86_64,
         .os_tag = .freestanding,
@@ -19,13 +18,11 @@ pub fn build(b: *Build) void {
     const target = b.resolveTargetQuery(target_query);
     const optimize = b.standardOptimizeOption(.{ .preferred_optimize_mode = .Debug });
 
-
-    _ = b.addModule("oslib", .{
+    _ = b.addModule("osstd", .{
         .optimize = optimize,
         .target = target,
 
-        .root_source_file = b.path("src/oslib.zig"),
+        .root_source_file = b.path("src/osstd.zig"),
         .code_model = .kernel,
     });
-
 }

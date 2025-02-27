@@ -1,4 +1,4 @@
-pub const SysCalls = enum(u64) {
+pub const SystemCall = enum(usize) {
 
     suicide = 0,
     write_stdout = 1,

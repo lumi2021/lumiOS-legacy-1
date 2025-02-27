@@ -13,6 +13,7 @@ pub const debug_ignore: []const KeyValuePair = &[_]KeyValuePair{
     .{ .key = "Paging", .value = ignore_all },
     .{ .key = "Schedue", .value = ignore_all },
     .{ .key = "Stack Tracer", .value = ignore_all },
+    .{ .key = "syscall", .value = ignore_all },
 
     // Drivers related
     .{ .key = "Drivers", .value = ignore_all },

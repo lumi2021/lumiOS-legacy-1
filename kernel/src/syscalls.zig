@@ -1,5 +1,6 @@
 const root = @import("root");
 const os = root.os;
+const ErrorCode = @import("osstd").ErrorCode;
 
 const idtm = os.system.interrupt_manager;
 const write = os.console_write("syscall");
@@ -10,7 +11,8 @@ const filesys = os.filesys;
 
 const TaskContext = os.theading.TaskContext;
 
-const SyscallVector = *const fn (u64, u64, u64, u64) u64;
+const SyscallVector = *const fn (usize, usize, usize, usize) SyscallReturn;
+const SyscallReturn = struct { err: ErrorCode, res: usize };
 
 var syscalls: [255]SyscallVector = undefined;
 
@@ -21,7 +23,7 @@ pub fn init() !void {
 
     syscalls[0x00] = syscall_00_kill_current_process;
     syscalls[0x01] = syscall_01_print_stdout;
-    
+
     syscalls[0x02] = syscall_02_open_file_descriptor;
     syscalls[0x03] = syscall_02_close_file_descriptor;
 }
@@ -31,41 +33,56 @@ pub fn syscall_interrupt(context: *TaskContext) void {
     defer st.pop();
 
     write.dbg("System call 0x{X} requested!", .{context.rax});
-    context.rax = syscalls[context.rax](context.rdi, context.rsi, context.rdx, context.r10);
+    const res = syscalls[context.rax](context.rdi, context.rsi, context.rdx, context.r10);
+    context.rax = res.res; // result in EAX
+    context.rbx = @intFromEnum(res.err); // error in EBX
 }
 
-fn unhandled_syscall(_: u64, _: u64, _: u64, _: u64) u64 {
+fn unhandled_syscall(_: usize, _: usize, _: usize, _: usize) SyscallReturn {
     write.err("Invalid system call", .{});
-    return 0;
+    return .{ .res = 0, .err = .NoError };
 }
 
-
-fn syscall_00_kill_current_process(a: u64, _: u64, _: u64, _: u64) u64 {
+fn syscall_00_kill_current_process(a: usize, _: usize, _: usize, _: usize) SyscallReturn {
     schedue.kill_current_process(@bitCast(a));
-    return 0;
+    return .{ .res = 0, .err = .NoError };
 }
 
-fn syscall_01_print_stdout(message: u64, _: u64, _: u64, _: u64) u64 {
+fn syscall_01_print_stdout(message: usize, _: usize, _: usize, _: usize) SyscallReturn {
     const str_buf: [*:0]u8 = @ptrFromInt(message);
     var str_len: usize = 0;
     while (str_buf[str_len] != 0) : (str_len += 1) {}
-    const str: [:0]u8 = str_buf[0..str_len:0];
+    const str: [:0]u8 = str_buf[0..str_len :0];
 
     os.uart.uart_puts(str);
 
-    return 0;
+    return .{ .res = 0, .err = .NoError };
 }
 
-fn syscall_02_open_file_descriptor(path_ptr: u64, flags: u64, _: u64, _: u64) u64 {
+fn syscall_02_open_file_descriptor(path_ptr: usize, flags: usize, _: usize, _: usize) SyscallReturn {
     const str_buf: [*:0]u8 = @ptrFromInt(path_ptr);
     var str_len: usize = 0;
     while (str_buf[str_len] != 0) : (str_len += 1) {}
-    const str: [:0]u8 = str_buf[0..str_len:0];
+    const str: [:0]u8 = str_buf[0..str_len :0];
 
-    return @bitCast(filesys.open_file_descriptor(str, @bitCast(flags)));
+    const res = filesys.open_file_descriptor(str, @bitCast(flags)) catch |err|
+        return .{ .res = 0, .err = error_to_enum(err) };
+
+    return .{ .res = @bitCast(res), .err = .NoError };
 }
 
-fn syscall_02_close_file_descriptor(handler: u64, _: u64, _: u64, _: u64) u64 {
+fn syscall_02_close_file_descriptor(handler: usize, _: usize, _: usize, _: usize) SyscallReturn {
     filesys.close_file_descriptor(handler);
-    return 0;
+    return .{ .res = 0, .err = .NoError };
+}
+
+fn error_to_enum(err: anyerror) ErrorCode {
+    return switch (err) {
+        error.outOfMemory => .OutOfMemory,
+        error.pathNotFound => .PathNotFound,
+        error.fileNotFound => .FileNotFound,
+        error.accessDenied => .AccessDenied,
+
+        else => .Undefined,
+    };
 }

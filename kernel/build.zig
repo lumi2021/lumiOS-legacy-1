@@ -34,8 +34,8 @@ pub fn build(b: *Build) void {
     kernel.setLinkerScript(b.path("../deps/linking/linkScript.ld"));
 
     // dependences
-    const oslib = b.dependency("oslib", .{}).module("oslib");
-    kernel.root_module.addImport("oslib", oslib);
+    const oslib = b.dependency("osstd", .{}).module("osstd");
+    kernel.root_module.addImport("osstd", oslib);
 
     // steps
     const install_kernel_step = b.addInstallArtifact(kernel, .{});

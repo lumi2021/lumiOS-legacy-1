@@ -4,6 +4,6 @@
     .paths = .{ "build.zig", "build.zig.zon" },
     
     .dependencies = .{
-        .oslib =  .{ .path = "../libs/oslib", },
+        .osstd =  .{ .path = "../libs/osstd", },
     }
 }

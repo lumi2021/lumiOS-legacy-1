@@ -1,26 +1,22 @@
 const std = @import("std");
 const os = @import("root").os;
-const oslib = @import("oslib");
+const osstd = @import("osstd");
 
 const write = os.console_write("Process A");
 const mem = os.memory;
 
 pub fn init(_: ?*anyopaque) callconv(.C) isize {
-    oslib.debug.print("Hello, World from process A!\n", .{});
+    osstd.debug.print("Hello, World from process A!\n", .{});
 
-    const path = std.fmt.allocPrintZ(mem.allocator, "/test", .{}) catch unreachable;
-    const path2 = std.fmt.allocPrintZ(mem.allocator, "sys:/dev/", .{}) catch unreachable;
-    
-    oslib.debug.print("Trying to open \"{s}\" and \"{s}\"...\n", .{path, path2});
+    const kbd_path = std.fmt.allocPrintZ(mem.allocator, "sys:/dev/input/kbd.event", .{}) catch unreachable;
+    const stdio_path = std.fmt.allocPrintZ(mem.allocator, "sys:/dev/stdio", .{}) catch unreachable;
 
-    const a = oslib.file.open(path, .{ .read = true });
-    const b = oslib.file.open(path2, .{ .read = true });
-    oslib.debug.print("File descriptors: {}, {}\n", .{a, b});
+    osstd.debug.print("Requesting keyboard and std IO access\n", .{});
+    const kbd = osstd.fs.openFileAbsolute(kbd_path, .{ .read = true }) catch |err| @panic(@errorName(err));
+    const stdio = osstd.fs.openFileAbsolute(stdio_path, .{ .read = true, .write = true }) catch |err| @panic(@errorName(err));
 
-    oslib.debug.print("Closing files...\n", .{});
-    oslib.file.close(a);
-    oslib.file.close(b);
+    kbd.close();
+    stdio.close();
 
-    oslib.debug.print("Terminating...\n", .{});
-    oslib.process.terminate_process(2);
+    osstd.process.terminate_process(0);
 }
