@@ -8,6 +8,12 @@ var col: usize = 0;
 fn getConHeight() usize { return @divFloor(gl.canvasHeight, 24) - 2; }
 fn getConWidth() usize { return @divFloor(gl.canvasWidth, 16) - 2; }
 
+pub fn printfc(comptime msg: []const u8, args: anytype, c: u24) void {
+    const old_col = gl.text.fg_color;
+    gl.text.fg_color = c;
+    printf(msg, args);
+    gl.text.fg_color = old_col;
+}
 pub fn printf(comptime msg: []const u8, args: anytype) void {
     var buf: [1024]u8 = undefined;
     puts(std.fmt.bufPrint(&buf, msg, args) catch unreachable);

@@ -9,7 +9,7 @@ pub fn init(_: ?*anyopaque) callconv(.C) isize {
     osstd.debug.print("Hello, World from process A!\n", .{});
 
     const kbd_path = std.fmt.allocPrintZ(mem.allocator, "sys:/dev/input/kbd.event", .{}) catch unreachable;
-    const stdio_path = std.fmt.allocPrintZ(mem.allocator, "sys:/dev/stdio", .{}) catch unreachable;
+    const stdio_path = std.fmt.allocPrintZ(mem.allocator, "sys:/self/stdio", .{}) catch unreachable;
 
     osstd.debug.print("Requesting keyboard and std IO access\n", .{});
     const kbd = osstd.fs.openFileAbsolute(kbd_path, .{ .read = true }) catch |err| @panic(@errorName(err));
