@@ -25,7 +25,7 @@ pub fn init() !void {
     syscalls[0x01] = syscall_01_print_stdout;
 
     syscalls[0x02] = syscall_02_open_file_descriptor;
-    syscalls[0x03] = syscall_02_close_file_descriptor;
+    syscalls[0x03] = syscall_03_close_file_descriptor;
 }
 
 pub fn syscall_interrupt(context: *TaskContext) void {
@@ -74,7 +74,7 @@ fn syscall_02_open_file_descriptor(path_ptr: usize, flags: usize, _: usize, _: u
     return .{ .res = @bitCast(res), .err = .NoError };
 }
 
-fn syscall_02_close_file_descriptor(handler: usize, _: usize, _: usize, _: usize) SyscallReturn {
+fn syscall_03_close_file_descriptor(handler: usize, _: usize, _: usize, _: usize) SyscallReturn {
     filesys.close_file_descriptor(handler);
     return .{ .res = 0, .err = .NoError };
 }

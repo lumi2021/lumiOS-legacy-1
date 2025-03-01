@@ -50,7 +50,6 @@ pub fn write(comptime tag: []const u8) type {
     };
 }
 
-
 fn isLogDisabled(comptime tag: []const u8) bool {
     for (os.config.debug_ignore) |i| {
         if (std.mem.eql(u8, tag, i.key) and (i.value & 0b0001) != 0) return true;
