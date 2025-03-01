@@ -136,8 +136,6 @@ pub fn do_schedue(currContext: *TaskContext) void {
     }
     // fallback to let it on hold
     else currContext.* = default_context;
-
-    write.dbg("hit", .{});
 }
 
 fn no_task_in_queue(currContext: *TaskContext) void {

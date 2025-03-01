@@ -18,5 +18,6 @@ pub fn init(_: ?*anyopaque) callconv(.C) isize {
     kbd.close();
     stdio.close();
 
+    osstd.debug.print("Exiting task...\n", .{});
     osstd.process.terminate_process(0);
 }

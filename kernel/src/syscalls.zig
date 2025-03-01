@@ -33,9 +33,12 @@ pub fn syscall_interrupt(context: *TaskContext) void {
     defer st.pop();
 
     write.dbg("System call 0x{X} requested!", .{context.rax});
+
     const res = syscalls[context.rax](context.rdi, context.rsi, context.rdx, context.r10);
     context.rax = res.res; // result in EAX
     context.rbx = @intFromEnum(res.err); // error in EBX
+
+    write.dbg("System call returned!", .{});
 }
 
 fn unhandled_syscall(_: usize, _: usize, _: usize, _: usize) SyscallReturn {

@@ -18,7 +18,6 @@ pub fn main(binfo: BootInfo) noreturn {
 
     st.push(@src());
 
-    write.log("# Starting basic graphics...", .{});
     {
         os.GL.init(binfo.framebuffer);
         os.GL.clear();
@@ -32,12 +31,12 @@ pub fn main(binfo: BootInfo) noreturn {
         os.GL.text.drawString(" 0.1.0 ", centerX2, centerY2 + 40);
 
         os.uart.uart_initialize();
-        write.log("Hello, World from {s}!", .{@tagName(os.system.arch)});
     }
+    write.raw("Hello, World from {s}!\n", .{@tagName(os.system.arch)});
 
     write.log("# Starting setup routine...", .{});
     sys.sys_flags.clear_interrupt();
-    kernel_setup() catch |err| @panic(@errorName(err));
+    kernel_setup();
 
     write.log("# Starting system calls...", .{});
     try os.syscalls.init();
@@ -49,7 +48,8 @@ pub fn main(binfo: BootInfo) noreturn {
     os.theading.run_process(@constCast("Process A"), @import("test-processes/process_a.zig").init, null, 0) catch @panic("Cannot initialize process");
     //os.theading.run_process(@constCast("Process B"), @import("test-processes/process_b.zig").init, null, 0) catch @panic("Cannot initialize process");
 
-    os.GL.clear();
+    //os.GL.clear();
+    //os.GL.text.drawString("Hello, world from my kernel!", 10, 10);
 
     write.log("# Starting schedue...", .{});
     setup_pic();
@@ -61,11 +61,11 @@ pub fn main(binfo: BootInfo) noreturn {
     while (true) sys.sys_flags.set_interrupt();
 }
 
-fn kernel_setup() !void {
+fn kernel_setup() void {
     st.push(@src());
     defer st.pop();
 
-    errdefer @panic("Error duting kernel sutupping...");
+    errdefer @panic("Error during kernel sutup!");
 
     write.log(" - Setting up global descriptor table...", .{});
     sys.global_descriptor_table.gdt_install();
@@ -118,21 +118,20 @@ fn setup_timer() void {
     io.outb(0x40, @intCast((divisor >> 8) & 0xFF));
 }
 
-pub fn panic(msg: []const u8, stack_trace: ?*builtin.StackTrace, return_address: ?usize) noreturn {
-    const panic_write = os.console_write("Panic");
 
+pub fn panic(msg: []const u8, stack_trace: ?*builtin.StackTrace, return_address: ?usize) noreturn {
     _ = return_address;
     _ = stack_trace;
 
-    panic_write.err("\n !!! Kernel Panic !!! \n{s}\n", .{msg});
+    write.raw("\n !!! Kernel Panic !!! \n{s}\n\n", .{msg});
 
     const stk = st.get_stack_trace();
 
     if (stk.len < 1024) {
-        panic_write.log("Stack Trace ({}):", .{stk.len});
-
+        write.raw("Stack Trace ({}):\n", .{stk.len});
         for (stk) |i| {
-            panic_write.log(" - {s}", .{i});
+            const it = i[0 .. std.mem.indexOf(u8, &i, "\x00") orelse 128];
+            write.raw("   - {s}\n", .{it});
         }
     }
 

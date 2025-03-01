@@ -96,6 +96,7 @@ pub const Task = struct {
 
     pub fn format(self: *const @This(), comptime _: []const u8, _: std.fmt.FormatOptions, fmt: anytype) !void {
         try fmt.print("Task \"{s}\"\n", .{self.task_name});
+        try fmt.print("stc: {}\n", .{self.stack_trace_count});
         try fmt.print("Context:\n{0}", .{self.context});
     }
 };
