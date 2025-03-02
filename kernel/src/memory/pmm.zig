@@ -33,8 +33,9 @@ pub fn init(paddrwidth: u8, memmap: []*MemMapEntry) void {
     const phys_base = boot_info.kernel_physical_base;
     const virt_base = boot_info.kernel_virtual_base;
     const kernel_end = @intFromPtr(@extern(*u64, .{ .name = "__kernel_end__" }));
+    const kernel_dif = kernel_end - virt_base;
 
-    kernel_size = std.mem.alignForwardLog2(phys_base + kernel_end - virt_base, 24);
+    kernel_size = std.mem.alignForwardLog2(phys_base + kernel_dif, 24);
 
     write.dbg("kernel physical base: 0x{X:0>16}", .{phys_base});
     write.dbg("kernel virtual base: 0x{X:0>16}", .{virt_base});

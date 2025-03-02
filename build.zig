@@ -91,4 +91,7 @@ pub fn build(b: *Build) void {
 
     const run_step = b.step("run", "Run the OS in qemu");
     run_step.dependOn(&run_cmd.step);
+
+    const build_step = b.step("build", "Build the OS");
+    build_step.dependOn(&limine_bios_install.step);
 }

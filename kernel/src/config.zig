@@ -9,9 +9,9 @@ pub const debug_ignore: []const KeyValuePair = &[_]KeyValuePair{
     .{ .key = "Main", .value = default },
     
     // memory
-    .{ .key = "PMM", .value = ignore_all },
-    .{ .key = "VMM", .value = ignore_all },
-    .{ .key = "Paging", .value = ignore_all },
+    .{ .key = "PMM", .value = default },
+    .{ .key = "VMM", .value = default },
+    .{ .key = "Paging", .value = default },
 
     // threading
     .{ .key = "schedue", .value = ignore_all },
