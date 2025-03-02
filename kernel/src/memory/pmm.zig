@@ -23,7 +23,7 @@ const pmm_sizes_global = blk: {
 export var free_roots = [_]usize{0} ** pmm_sizes_global.len;
 
 pub fn init(paddrwidth: u8, memmap: []*MemMapEntry) void {
-    st.push(@src());
+    st.push(@src()); defer st.pop();
 
     const boot_info = @import("root").boot_info;
 
@@ -74,8 +74,6 @@ pub fn init(paddrwidth: u8, memmap: []*MemMapEntry) void {
             write.dbg("skipping 0x{X}..0x{X} as it's marked as {s}", .{entry.base, entry.base + entry.size, @tagName(entry.type)});
         }
     }
-
-    st.pop();
 }
 
 fn mark_free(phys_addr: usize, len: usize) void {
