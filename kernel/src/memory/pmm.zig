@@ -69,6 +69,8 @@ pub fn init(paddrwidth: u8, memmap: []*MemMapEntry) void {
 
             write.dbg("marking 0x{X}..0x{X} (0X{X} bytes)", .{ base, end, size });
             mark_free(base, size);
+        } else {
+            write.dbg("skipping 0x{X}..0x{X} as it's marked as {s}", .{entry.base, entry.base + entry.size, @tagName(entry.type)});
         }
     }
 
@@ -107,7 +109,7 @@ fn mark_free(phys_addr: usize, len: usize) void {
 }
 
 pub fn alloc(len: usize) !usize {
-    st.push(@src());
+    st.push(@src()); defer st.pop();
 
     const idx = std.math.log2_int_ceil(usize, len) - 12;
     if (idx >= pmm_sizes.len) return error.physical_allocation_too_large;
@@ -115,11 +117,10 @@ pub fn alloc(len: usize) !usize {
     const p = try alloc_impl(idx);
     @memset(ptr_from_paddr([*]u8, p)[0..len], undefined);
 
-    st.pop();
     return p;
 }
 fn alloc_impl(idx: usize) error{OutOfMemory}!usize {
-    st.push(@src());
+    st.push(@src()); defer st.pop();
 
     if (free_roots[idx] == 0) {
         if (idx + 1 >= pmm_sizes.len) return error.OutOfMemory;
@@ -135,13 +136,11 @@ fn alloc_impl(idx: usize) error{OutOfMemory}!usize {
             next_size -= curr_size;
         }
 
-        st.pop();
         return next;
     } else {
         const addr = free_roots[idx];
         free_roots[idx] = ptr_from_paddr(*const usize, addr).*;
 
-        st.pop();
         return addr;
     }
 }

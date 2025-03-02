@@ -52,7 +52,7 @@ pub inline fn Table(Entry: type) type {
 }
 
 pub fn map_range(pbase: usize, vbase: usize, len: usize) !void {
-    st.push(@src());
+    st.push(@src()); defer st.pop(); errdefer |err| @panic(@errorName(err));
 
     var pa = pbase;
     var la = vbase;
@@ -62,10 +62,8 @@ pub fn map_range(pbase: usize, vbase: usize, len: usize) !void {
         !std.mem.isAlignedLog2(pa, 12)
      or !std.mem.isAlignedLog2(@bitCast(la), 12)
      or !std.mem.isAlignedLog2(sz, 12)
-    ) {
-        st.pop();
+    )
         return error.misaligned_mapping_range;
-    }
 
     while (sz > 0) {
         if (
@@ -95,12 +93,10 @@ pub fn map_range(pbase: usize, vbase: usize, len: usize) !void {
             la += 1 << 12;
         }
     }
-
-    st.pop();
 }
 
 pub fn map_page(paddr: usize, vaddr: usize, page_size: PageSize) !void {
-    st.push(@src());
+    st.push(@src()); defer st.pop(); errdefer |err| @panic(@errorName(err));
 
     const split: SplitPagingAddr = @bitCast(vaddr);
 
@@ -149,7 +145,6 @@ pub fn map_page(paddr: usize, vaddr: usize, page_size: PageSize) !void {
         entry.page_size = true;
         entry.set_phys_addr(paddr);
         entry.present = true;
-        st.pop();
         return;
 
     } else if (page_size == .huge) {
@@ -159,7 +154,6 @@ pub fn map_page(paddr: usize, vaddr: usize, page_size: PageSize) !void {
             const new_p_addr = paddr + (table << 21);
             try map_page(new_p_addr, new_v_addr, .large);
         }
-        st.pop();
         return;
 
     }
@@ -181,7 +175,6 @@ pub fn map_page(paddr: usize, vaddr: usize, page_size: PageSize) !void {
         var entry: *PDE = &directory[split.table];
         if (entry.present) {
             write.dbg("large page already mapped for 0x{X}", .{vaddr});
-            st.pop();
             return error.address_already_mapped;
         }
         entry.* = @bitCast(@as(usize, 0));
@@ -210,10 +203,7 @@ pub fn map_page(paddr: usize, vaddr: usize, page_size: PageSize) !void {
     };
     {
         var entry: *PTE = &table[split.page];
-        if (entry.present) {
-            st.pop();
-            return error.address_already_mapped;
-        }
+        if (entry.present) return error.address_already_mapped;
         entry.* = @bitCast(@as(usize, 0));
         entry.writable = true;
         entry.xd = false;
@@ -221,12 +211,10 @@ pub fn map_page(paddr: usize, vaddr: usize, page_size: PageSize) !void {
         entry.set_phys_addr(paddr);
         entry.present = true;
     }
-
-    st.pop();
 }
 
 fn create_page_table(Entry: type, entry: anytype) !Table(Entry) {
-    st.push(@src());
+    st.push(@src()); defer st.pop(); errdefer |err| @panic(@errorName(err));
 
     const Ret = Table(Entry);
     const tbl_physaddr = try pmm.alloc(@sizeOf(std.meta.Child(Ret)));
@@ -234,33 +222,26 @@ fn create_page_table(Entry: type, entry: anytype) !Table(Entry) {
     const ptr = pmm.ptr_from_paddr(Ret, tbl_physaddr);
     @memset(std.mem.asBytes(ptr), 0);
     
-    st.pop();
     return ptr;
 }
 
 var cr3_new: ctrl_regs.ControlRegisterValueType(.cr3) = undefined;
 
 fn get_or_create_root_table() !Table(PML45E) {
-    st.push(@src());
+    st.push(@src()); defer st.pop();
 
-    if  (page_table) |table| {
-        st.pop();
-        return table;
-    }
+    if  (page_table) |table| return table;
 
     cr3_new = ctrl_regs.read(.cr3);
     page_table = try create_page_table(PML45E, &cr3_new);
     write.dbg("page table root allocated at phys 0x{X}", .{cr3_new.get_phys_addr()});
     root_physaddr = cr3_new.get_phys_addr();
 
-    st.pop();
     return page_table.?;
 }
 
 pub fn load_pgtbl() void {
-    st.push(@src());
     ctrl_regs.write(.cr3, cr3_new);
-    st.pop();
 }
 
 pub fn finalize() void {

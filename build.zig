@@ -60,7 +60,6 @@ pub fn build(b: *Build) void {
         "-m", "256M",
 
         // serial, video, etc
-
         "-serial", "mon:stdio",
 
         "-monitor", "vc",

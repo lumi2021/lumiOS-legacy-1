@@ -12,6 +12,7 @@ var phys_mapping_range_bits: u6 = undefined;
 
 pub fn init(memmap: []*MemMapEntry) !void {
     st.push(@src());
+    errdefer |err| write.err("error during VMM init: {s}", .{@errorName(err)});
 
     paging.using_5_level_paging = paging.features.five_level_paging; //and ctrl_registers.read(.cr4).la57;
 
