@@ -61,9 +61,8 @@ pub fn build(b: *Build) void {
 
         // serial, video, etc
         "-serial", "mon:stdio",
-
         "-monitor", "vc",
-        "-display", "gtk",
+        "-display", "gtk,zoom-to-fit=on",
 
         // Aditional devices
         "-device", "ahci,id=ahci",
