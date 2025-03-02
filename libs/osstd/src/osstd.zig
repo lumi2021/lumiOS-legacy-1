@@ -6,7 +6,7 @@ pub const fs = @import("fs/fs.zig");
 pub const process = @import("process/process.zig");
 pub const debug = @import("debug/debug.zig");
 
-pub fn doSystemCall(A: SystemCall, B: usize, C: usize, D: usize, E: usize) FailableUsize {
+pub export fn doSystemCall(A: SystemCall, B: usize, C: usize, D: usize, E: usize) FailableUsize {
     // FIXME support only for intel
 
     var result: u64 = undefined;
@@ -27,4 +27,4 @@ pub fn doSystemCall(A: SystemCall, B: usize, C: usize, D: usize, E: usize) Faila
     return .{ .err = err, .res = result };
 }
 
-pub const FailableUsize = struct { err: ErrorCode, res: usize };
+pub const FailableUsize = extern struct { err: ErrorCode, res: usize };

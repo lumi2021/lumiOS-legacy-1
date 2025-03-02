@@ -1,23 +1,37 @@
+const std = @import("std");
+
 pub const ResourceHandler = struct {
     in_use: bool,
-    data: union {
+    path: []u8,
+
+    data: union(Kind) {
         file: ResourceHandlerData_File,
+        directory: void,
+        symlink: void,
         device: ResourceHandlerData_Device,
-        IO: ResourceHandlerData_IO,
+        pipe: ResourceHandlerData_Pipe,
     },
+
+
+    pub const Kind = enum {
+        file,
+        directory,
+        symlink,
+        device,
+        pipe
+    };
 };
 
 pub const ResourceHandlerData_Device = struct {};
-pub const ResourceHandlerData_IO = struct {
-    read: *fn () anyerror![]u8,
-    write: *fn ([]u8) anyerror!void,
+pub const ResourceHandlerData_Pipe = struct {
+    
 };
 
 pub const ResourceHandlerData_File = struct {
-    path: []u8,
     cursor: usize,
 
     // access flags
     read: bool,
     write: bool,
+    execute: bool,
 };

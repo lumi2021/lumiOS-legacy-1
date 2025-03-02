@@ -6,16 +6,16 @@ const write = os.console_write("Process A");
 const mem = os.memory;
 
 pub fn init(_: ?*anyopaque) callconv(.C) isize {
-    osstd.debug.print("Hello, World from process A!\n", .{});
+    osstd.debug.print("Hello world from process A!", .{});
 
-    const kbd_path = std.fmt.allocPrintZ(mem.allocator, "sys:/dev/input/kbd.event", .{}) catch unreachable;
     const stdio_path = std.fmt.allocPrintZ(mem.allocator, "sys:/self/stdio", .{}) catch unreachable;
 
-    osstd.debug.print("Requesting keyboard and std IO access\n", .{});
-    const kbd = osstd.fs.openFileAbsolute(kbd_path, .{ .read = true }) catch |err| @panic(@errorName(err));
-    const stdio = osstd.fs.openFileAbsolute(stdio_path, .{ .read = true, .write = true }) catch |err| @panic(@errorName(err));
+    const stdio = osstd.fs.openFileAbsolute(stdio_path, .{ .read = true, .write = true })
+        catch |err| { @panic(@errorName(err)); };
 
-    kbd.close();
+    stdio.printf("Hello, World from process A!\n", .{}) catch unreachable;
+
+    //kbd.close();
     stdio.close();
 
     osstd.debug.print("Exiting task...\n", .{});

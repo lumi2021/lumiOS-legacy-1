@@ -48,14 +48,14 @@ pub fn get_stack_trace() [][128]u8 {
 
 pub fn save_task_stack_trace(task: *os.theading.Task) void {
 
-    write.dbg("Saving stack trace from {s} ({} itens)", .{ task.task_name, task.stack_trace_count });
+    write.dbg("Saving stack trace from {s} ({} itens)", .{ task.name, task.stack_trace_count });
     task.stack_trace = stack_trace;
     task.stack_trace_count = stack_trace_count;
 
 }
 pub fn load_task_stack_trace(task: *os.theading.Task) void {
 
-    write.dbg("Loading stack trace from {s} ({} itens)", .{ task.task_name, task.stack_trace_count });
+    write.dbg("Loading stack trace from {s} ({} itens)", .{ task.name, task.stack_trace_count });
     stack_trace = task.stack_trace;
     stack_trace_count = task.stack_trace_count;
 

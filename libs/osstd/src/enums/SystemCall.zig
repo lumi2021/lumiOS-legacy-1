@@ -5,6 +5,8 @@ pub const SystemCall = enum(usize) {
 
     open_file_descriptor = 2,
     close_file_descriptor = 3,
+    write = 4,
+    read = 5,
+    
     _
-
 };

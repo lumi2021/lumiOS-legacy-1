@@ -7,7 +7,7 @@ const write = os.console_write("syscall");
 const st = os.stack_tracer;
 
 const schedue = os.theading.schedue;
-const filesys = os.filesys;
+const fs = os.fs;
 
 const TaskContext = os.theading.TaskContext;
 
@@ -26,6 +26,7 @@ pub fn init() !void {
 
     syscalls[0x02] = syscall_02_open_file_descriptor;
     syscalls[0x03] = syscall_03_close_file_descriptor;
+    syscalls[0x04] = syscall_04_write;
 }
 
 pub fn syscall_interrupt(context: *TaskContext) void {
@@ -62,20 +63,29 @@ fn syscall_01_print_stdout(message: usize, _: usize, _: usize, _: usize) Syscall
     return .{ .res = 0, .err = .NoError };
 }
 
+// file operations
 fn syscall_02_open_file_descriptor(path_ptr: usize, flags: usize, _: usize, _: usize) SyscallReturn {
     const str_buf: [*:0]u8 = @ptrFromInt(path_ptr);
     var str_len: usize = 0;
     while (str_buf[str_len] != 0) : (str_len += 1) {}
     const str: [:0]u8 = str_buf[0..str_len :0];
 
-    const res = filesys.open_file_descriptor(str, @bitCast(flags)) catch |err|
+    const res = fs.open_file_descriptor(str, @bitCast(flags)) catch |err|
         return .{ .res = 0, .err = error_to_enum(err) };
 
     return .{ .res = @bitCast(res), .err = .NoError };
 }
-
 fn syscall_03_close_file_descriptor(handler: usize, _: usize, _: usize, _: usize) SyscallReturn {
-    filesys.close_file_descriptor(handler);
+    fs.close_file_descriptor(handler);
+    return .{ .res = 0, .err = .NoError };
+}
+
+fn syscall_04_write(handler: usize, bytes: usize, length: usize, pos: usize) SyscallReturn {
+
+    _ = bytes;
+
+    write.log("Request to write {} bytes in position {} of file {}", .{length, pos, handler});
+
     return .{ .res = 0, .err = .NoError };
 }
 

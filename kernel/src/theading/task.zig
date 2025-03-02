@@ -8,13 +8,18 @@ const write = os.console_write("Task");
 const st = os.stack_tracer;
 
 const ResourceHandler = os.system.ResourceHandler;
+const Pipe = os.theading.Pipe;
+
+const PipeMap = std.StringHashMap(Pipe);
 
 const guard_size = os.theading.stack_guard_size;
 const map_size = os.theading.task_stack_size;
 const total_size = guard_size + map_size;
 
 pub const Task = struct {
-    task_name: [:0]u8,
+    name: [:0]u8,
+    id: usize,
+    state: TaskState,
 
     entry_pointer: usize,
     args_pointer: usize,
@@ -28,6 +33,9 @@ pub const Task = struct {
     context: TaskContext,
     resources: []ResourceHandler,
 
+    stdio: *Pipe,
+    pipes: PipeMap,
+
     taskAllocator: std.heap.ArenaAllocator,
 
     pub fn allocate_new() *Task {
@@ -39,6 +47,10 @@ pub const Task = struct {
         ptr.taskAllocator = std.heap.ArenaAllocator.init(os.memory.allocator);
         // Create resources list
         ptr.resources = ptr.taskAllocator.allocator().alloc(ResourceHandler, 0x40) catch unreachable;
+        // Create stdio pipe
+        ptr.stdio = Pipe.init("stdio");
+        // Create pipe map
+        ptr.pipes = PipeMap.init(ptr.taskAllocator.allocator());
 
         { // stack trace config
             ptr.stack_trace = undefined;
@@ -99,4 +111,10 @@ pub const Task = struct {
         try fmt.print("stc: {}\n", .{self.stack_trace_count});
         try fmt.print("Context:\n{0}", .{self.context});
     }
+};
+
+pub const TaskState = enum {
+    new,
+    ready,
+    running
 };

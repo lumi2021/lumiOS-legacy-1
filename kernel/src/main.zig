@@ -41,6 +41,10 @@ pub fn main(binfo: BootInfo) noreturn {
     write.log("# Starting system calls...", .{});
     try os.syscalls.init();
 
+    write.log("# Starting file systems...", .{});
+    try os.fs.init();
+    try os.vfs.init();
+
     write.log("# Starting drivers...", .{});
     os.drivers.init_all_drivers() catch |err| @panic(@errorName(err));
 
@@ -83,7 +87,7 @@ fn kernel_setup() void {
     try os.memory.vmm.init(boot_info.memory_map);
 
     write.log(" - Setting up Task Manager...", .{});
-    os.theading.schedue.init();
+    os.theading.taskManager.init();
 }
 
 fn setup_pic() void {

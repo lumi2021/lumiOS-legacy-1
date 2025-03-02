@@ -1,6 +1,7 @@
 const root = @import("../osstd.zig");
+const std = @import("std");
 
-descriptor: i64,
+descriptor: isize,
 flags: AccessFlags,
 kind: Kind,
 
@@ -27,11 +28,18 @@ pub fn close(self: @This()) void {
 }
 
 pub fn writeBytes(self: @This(), data: []u8) FileError!void {
-    _ = self;
-    _ = data;
+    const res = root.doSystemCall(.write, @bitCast(self.descriptor), @intFromPtr(data.ptr), data.len,  0);
+    _ = res;
+    // TODO handle errors
 }
 pub fn readBytes(self: @This()) FileError!void {
     _ = self;
+}
+
+pub fn printf(self: @This(), comptime str: []const u8, args: anytype) FileError!void {
+    var buf: [1024]u8 = undefined;
+    const res = std.fmt.bufPrint(&buf, str, args) catch unreachable;
+    try self.writeBytes(res);
 }
 
 pub const Kind = enum {
