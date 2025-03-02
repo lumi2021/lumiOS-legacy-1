@@ -68,7 +68,7 @@ pub fn do_schedue(currContext: *TaskContext) void {
     if (task_manager.getTheadCount() == 0) {
         no_task_in_queue(currContext);
         return;
-    }
+    } else if (task_manager.getTheadCount() == 1 and current_task != null) return;
 
     // save current context
     if (current_task) |cTask| {

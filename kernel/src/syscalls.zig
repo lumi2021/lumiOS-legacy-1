@@ -58,6 +58,7 @@ fn syscall_01_print_stdout(message: usize, _: usize, _: usize, _: usize) Syscall
     while (str_buf[str_len] != 0) : (str_len += 1) {}
     const str: [:0]u8 = str_buf[0..str_len :0];
 
+    write.log("task: {s}", .{str});
     os.GL.bcom.puts(str);
 
     return .{ .res = 0, .err = .NoError };

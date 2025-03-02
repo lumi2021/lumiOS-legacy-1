@@ -5,7 +5,7 @@ const schedue = os.theading.schedue;
 const ProcessEntryFunction = os.theading.ProcessEntryFunction;
 const Task = os.theading.Task;
 
-const write = os.console_write("task manager");
+const write = os.console_write("taskman");
 const st = os.stack_tracer;
 
 const TaskItem = ?*Task;

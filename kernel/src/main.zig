@@ -66,8 +66,7 @@ pub fn main(binfo: BootInfo) noreturn {
 }
 
 fn kernel_setup() void {
-    st.push(@src());
-    defer st.pop();
+    st.push(@src()); defer st.pop();
 
     errdefer @panic("Error during kernel sutup!");
 
