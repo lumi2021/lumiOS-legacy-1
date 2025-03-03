@@ -52,7 +52,8 @@ pub inline fn Table(Entry: type) type {
 }
 
 pub fn map_range(pbase: usize, vbase: usize, len: usize) !void {
-    st.push(@src()); defer st.pop(); errdefer |err| @panic(@errorName(err));
+    st.push(@src()); defer st.pop();
+    errdefer |err| @panic(@errorName(err));
 
     var pa = pbase;
     var la = vbase;

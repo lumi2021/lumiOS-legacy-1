@@ -10,7 +10,7 @@ pub var max_phys_mem: usize = 0;
 var phys_mapping_base_unsigned: usize = undefined;
 pub var kernel_size: usize = undefined;
 var phys_addr_width: u8 = undefined;
-var phys_mapping_limit: usize = 1 << 31;
+var phys_mapping_limit: usize = undefined;
 
 var pmm_sizes: []const usize = undefined;
 const pmm_sizes_global = blk: {
@@ -26,6 +26,7 @@ pub fn init(paddrwidth: u8, memmap: []*MemMapEntry) void {
     st.push(@src()); defer st.pop();
 
     const boot_info = @import("root").boot_info;
+    phys_mapping_limit = boot_info.kernel_virtual_base;
 
     phys_mapping_base_unsigned = boot_info.hhdm_address_offset;
     write.dbg("initial physical mapping base 0x{X:0>16}", .{phys_mapping_base_unsigned});
@@ -71,7 +72,7 @@ pub fn init(paddrwidth: u8, memmap: []*MemMapEntry) void {
             write.dbg("marking 0x{X}..0x{X} (0X{X} bytes)", .{ base, end, size });
             mark_free(base, size);
         } else {
-            write.dbg("skipping 0x{X}..0x{X} as it's marked as {s}", .{entry.base, entry.base + entry.size, @tagName(entry.type)});
+            write.dbg("skipping 0x{X}..0x{X} as it's marked as {s}", .{ entry.base, entry.base + entry.size, @tagName(entry.type) });
         }
     }
 }
@@ -108,7 +109,8 @@ fn mark_free(phys_addr: usize, len: usize) void {
 }
 
 pub fn alloc(len: usize) !usize {
-    st.push(@src()); defer st.pop();
+    st.push(@src());
+    defer st.pop();
 
     const idx = std.math.log2_int_ceil(usize, len) - 12;
     if (idx >= pmm_sizes.len) return error.physical_allocation_too_large;
@@ -119,7 +121,8 @@ pub fn alloc(len: usize) !usize {
     return p;
 }
 fn alloc_impl(idx: usize) error{OutOfMemory}!usize {
-    st.push(@src()); defer st.pop();
+    st.push(@src());
+    defer st.pop();
 
     if (free_roots[idx] == 0) {
         if (idx + 1 >= pmm_sizes.len) return error.OutOfMemory;
