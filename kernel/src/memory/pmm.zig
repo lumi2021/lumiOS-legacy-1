@@ -31,20 +31,16 @@ pub fn init(paddrwidth: u8, memmap: []*MemMapEntry) void {
     phys_mapping_base_unsigned = boot_info.hhdm_address_offset;
     write.dbg("initial physical mapping base 0x{X:0>16}", .{phys_mapping_base_unsigned});
 
-    const phys_base = boot_info.kernel_physical_base;
     const virt_base = boot_info.kernel_virtual_base;
-    const kernel_end = @intFromPtr(@extern(*u64, .{ .name = "__kernel_end__" }));
+    const virt_end = @intFromPtr(@extern(*u64, .{ .name = "__kernel_end__" }));
+    kernel_size = std.mem.alignForwardLog2(virt_end - virt_base, 24);
+    
+    const phys_base = boot_info.kernel_physical_base;
+    const phys_end = phys_base + kernel_size;
 
-    kernel_size = std.mem.alignForwardLog2(kernel_end - virt_base, 24);
-
-    write.dbg("kernel physical base: 0x{X:0>16}", .{phys_base});
-    write.dbg("kernel virtual base: 0x{X:0>16}", .{virt_base});
-    write.dbg("kernel virtual end: 0x{X:0>16}", .{kernel_end});
+    write.dbg("kernel physical: 0x{X:0>16} .. 0x{X:0>16}", .{phys_base, phys_end});
+    write.dbg("kernel virtual:  0x{X:0>16} .. 0x{X:0>16}", .{virt_base, virt_end});
     write.dbg("kernel size: 0x{X}", .{kernel_size});
-
-    //for (0..0xFFFFFFFF) |_| {
-    //    std.mem.doNotOptimizeAway(asm volatile ("nop"));
-    //}
 
     phys_addr_width = paddrwidth;
 
@@ -57,18 +53,30 @@ pub fn init(paddrwidth: u8, memmap: []*MemMapEntry) void {
             const end = base + size;
 
             if (end > max_phys_mem) max_phys_mem = end;
-            if (end < phys_base + kernel_size) {
+
+            // Being entirelly used by the kernel
+            if (base > phys_base and end < phys_end) {
                 write.dbg("skipping 0x{X}..0x{X} as it is space already reserved by the kernel.", .{ base, end });
                 continue;
             }
+
+            // Exeeds physical limit
             if (end > phys_mapping_limit) {
                 write.dbg("skipping 0x{X}..0x{X} as it exceeds physical mapping limit.", .{ base, end });
                 continue;
             }
-            if (base < kernel_size) {
-                const diff = kernel_size - base;
-                write.dbg("adjusting 0x{X}..0x{X} forward 0x{X} bytes to avoid initial kernel block.", .{ base, end, diff });
-                base = kernel_size;
+
+
+            // Page includes but not entirelly kernel
+            if (base < phys_base and end > phys_base) {
+                const diff = end - phys_base;
+                write.dbg("adjusting 0x{X}..0x{X} backward 0x{X} bytes to avoid kernel block.", .{ base, end, diff });
+                size -= diff;
+            }
+            if (base < phys_end and end > phys_end) {
+                const diff = phys_end - base;
+                write.dbg("adjusting 0x{X}..0x{X} forward 0x{X} bytes to avoid kernel block.", .{ base, end, diff });
+                base = phys_end;
                 size -= diff;
             }
 
