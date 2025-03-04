@@ -35,6 +35,7 @@ fn keyboard_interrupt_handler(_: *IntFrame) void {
         keyboard_buffer_data[keyboard_buffer_elements] = scancode;
         keyboard_buffer_elements += 1;
 
+        log.log("keyboard pressed! scancode: {X}", .{scancode});
         kbEvent();
     }
 

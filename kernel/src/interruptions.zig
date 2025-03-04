@@ -9,6 +9,7 @@ const InterruptFrame = os.theading.TaskContext;
 pub fn init() void {
     st.push(@src());
 
+    // Exceptions and faults
     interrupts[0] = handle_divide_by_zero;
 
     interrupts[6] = handle_invalid_opcode;
@@ -19,6 +20,8 @@ pub fn init() void {
     interrupts[14] = handle_page_fault;
 
     interrupts[32] = handle_timer_interrupt;
+
+    interrupts[39] = handle_spurious_interrupt;
 
     st.pop();
 }
@@ -126,6 +129,10 @@ fn handle_timer_interrupt(frame: *InterruptFrame) void {
     st.push(@src());
     os.theading.schedue.do_schedue(frame);
     st.pop();
+}
+
+fn handle_spurious_interrupt(_: *InterruptFrame) void {
+
 }
 
 fn try_kill_process() void {

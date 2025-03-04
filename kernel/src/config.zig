@@ -9,9 +9,9 @@ pub const debug_ignore: []const KeyValuePair = &[_]KeyValuePair{
     .{ .key = "Main", .value = default },
     
     // memory
-    .{ .key = "PMM", .value = default },
-    .{ .key = "VMM", .value = default },
-    .{ .key = "Paging", .value = default },
+    .{ .key = "PMM", .value = ignore_all },
+    .{ .key = "VMM", .value = ignore_all },
+    .{ .key = "Paging", .value = ignore_all },
 
     // threading
     .{ .key = "schedue", .value = ignore_all },
@@ -29,8 +29,8 @@ pub const debug_ignore: []const KeyValuePair = &[_]KeyValuePair{
     // Drivers related
     .{ .key = "Drivers", .value = ignore_all },
     .{ .key = "PCI", .value = ignore_all },
-    .{ .key = "ps2", .value = ignore_all },
-    .{ .key = "Keyboard", .value = ignore_all },
+    .{ .key = "ps2", .value = default },
+    .{ .key = "Keyboard", .value = default },
 
     // Allocations
     .{ .key = "Alloc", .value = ignore_all },

@@ -22,10 +22,10 @@ pub fn main(binfo: BootInfo) noreturn {
         os.GL.init(binfo.framebuffer);
         os.GL.clear();
 
-        const centerX = (os.GL.canvasWidth / 2 - (32 * 7) / 2);
-        const centerY = (os.GL.canvasHeight / 2 - 54 / 2);
-        const centerX2 = (os.GL.canvasWidth / 2 - (16 * 7) / 2);
-        const centerY2 = (os.GL.canvasHeight / 2 - 27 / 2);
+        const centerX = (os.GL.canvasWidth / 2 - (36 * 7) / 2);
+        const centerY = (os.GL.canvasHeight / 2 - 80 / 2);
+        const centerX2 = (os.GL.canvasWidth / 2 - (8 * 7) / 2);
+        const centerY2 = (os.GL.canvasHeight / 2 - 16 / 2);
 
         os.GL.text.drawBigString("LUMI OS", centerX, centerY);
         os.GL.text.drawString(" 0.1.0 ", centerX2, centerY2 + 40);
@@ -126,7 +126,8 @@ pub fn panic(msg: []const u8, stack_trace: ?*builtin.StackTrace, return_address:
     _ = return_address;
     _ = stack_trace;
 
-    write.raw("\n !!! Kernel Panic !!! \n{s}\n\n", .{msg});
+    write.err("\n!!! Kernel Panic !!!", .{});
+    write.raw("Error message: {s}\r\n", .{msg});
 
     const stk = st.get_stack_trace();
 

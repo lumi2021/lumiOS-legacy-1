@@ -68,6 +68,10 @@ pub fn build(b: *Build) void {
         "-device", "ahci,id=ahci",
         "-device", "ide-hd,drive=drive0,bus=ahci.0",
 
+        "-device", "qemu-xhci,id=usb",
+        "-device", "usb-kbd",
+        "-device", "usb-mouse",
+
         // Debug
         "-D", "log.txt",
         "-d", "int,cpu_reset",
@@ -77,7 +81,6 @@ pub fn build(b: *Build) void {
         //"-trace", "*xhci*",
 
         // Disk
-        //"-hdd", "fat:rw:zig-out/.disk"
         "-drive", "id=drive0,file=zig-out/lumiOS.iso,format=raw,if=none",
         "-boot", "order=c"
     });
