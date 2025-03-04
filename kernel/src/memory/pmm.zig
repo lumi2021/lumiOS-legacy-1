@@ -9,8 +9,9 @@ const st = os.stack_tracer;
 pub var max_phys_mem: usize = 0;
 var phys_mapping_base_unsigned: usize = undefined;
 pub var kernel_size: usize = undefined;
+pub var kernel_phys_size: usize = undefined;
 var phys_addr_width: u8 = undefined;
-var phys_mapping_limit: usize = undefined;
+var phys_mapping_limit: usize = 1 << 31;
 
 var pmm_sizes: []const usize = undefined;
 const pmm_sizes_global = blk: {
@@ -26,7 +27,6 @@ pub fn init(paddrwidth: u8, memmap: []*MemMapEntry) void {
     st.push(@src()); defer st.pop();
 
     const boot_info = @import("root").boot_info;
-    phys_mapping_limit = boot_info.kernel_virtual_base;
 
     phys_mapping_base_unsigned = boot_info.hhdm_address_offset;
     write.dbg("initial physical mapping base 0x{X:0>16}", .{phys_mapping_base_unsigned});
@@ -34,14 +34,17 @@ pub fn init(paddrwidth: u8, memmap: []*MemMapEntry) void {
     const phys_base = boot_info.kernel_physical_base;
     const virt_base = boot_info.kernel_virtual_base;
     const kernel_end = @intFromPtr(@extern(*u64, .{ .name = "__kernel_end__" }));
-    const kernel_dif = kernel_end - virt_base;
 
-    kernel_size = std.mem.alignForwardLog2(phys_base + kernel_dif, 24);
+    kernel_size = std.mem.alignForwardLog2(kernel_end - virt_base, 24);
 
     write.dbg("kernel physical base: 0x{X:0>16}", .{phys_base});
     write.dbg("kernel virtual base: 0x{X:0>16}", .{virt_base});
-    write.dbg("kernel physical end: 0x{X:0>16}", .{kernel_end});
+    write.dbg("kernel virtual end: 0x{X:0>16}", .{kernel_end});
     write.dbg("kernel size: 0x{X}", .{kernel_size});
+
+    //for (0..0xFFFFFFFF) |_| {
+    //    std.mem.doNotOptimizeAway(asm volatile ("nop"));
+    //}
 
     phys_addr_width = paddrwidth;
 
@@ -54,7 +57,7 @@ pub fn init(paddrwidth: u8, memmap: []*MemMapEntry) void {
             const end = base + size;
 
             if (end > max_phys_mem) max_phys_mem = end;
-            if (end < kernel_size) {
+            if (end < phys_base + kernel_size) {
                 write.dbg("skipping 0x{X}..0x{X} as it is space already reserved by the kernel.", .{ base, end });
                 continue;
             }
@@ -71,9 +74,10 @@ pub fn init(paddrwidth: u8, memmap: []*MemMapEntry) void {
 
             write.dbg("marking 0x{X}..0x{X} (0X{X} bytes)", .{ base, end, size });
             mark_free(base, size);
-        } else {
-            write.dbg("skipping 0x{X}..0x{X} as it's marked as {s}", .{ entry.base, entry.base + entry.size, @tagName(entry.type) });
         }
+        //else {
+        //    write.dbg("skipping 0x{X}..0x{X} as it's marked as {s}", .{ entry.base, entry.base + entry.size, @tagName(entry.type) });
+        //}
     }
 }
 

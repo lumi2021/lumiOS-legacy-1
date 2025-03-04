@@ -91,11 +91,13 @@ export fn interrupt_handler(fptr: u64) void {
 
     writer.dbg("Branching to interrupt {X:0>2}...", .{int_frame.intnum});
 
-    writer.dbg("\n{}", .{int_frame});
+    writer.dbg("frame before:\n{}", .{int_frame});
 
     st.push_interrupt(int_frame.intnum);
     interrupts[int_frame.intnum](int_frame);
     st.pop();
+
+    writer.dbg("frame after:\n{}", .{int_frame});
 
     os.port_io.outb(0x20, 0x20);
 }

@@ -88,6 +88,7 @@ pub fn handle_general_protection(frame: *InterruptFrame) void {
         //}
     }
 
+    while (true) {}
     try_kill_process();
 }
 

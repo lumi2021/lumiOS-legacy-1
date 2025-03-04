@@ -57,7 +57,7 @@ pub fn build(b: *Build) void {
         
         "-M", "q35",
         "-bios", "deps/debug/OVMF.fd", // for UEFI emulation (not recommended)
-        "-m", "256M",
+        "-m", "512M",
 
         // serial, video, etc
         "-serial", "mon:stdio",
@@ -86,12 +86,12 @@ pub fn build(b: *Build) void {
     geneate_img_cmd.step.dependOn(&install_kernel_step.step);
 
     limine_bios_install.step.dependOn(&geneate_img_cmd.step);
-    run_cmd.step.dependOn(&limine_bios_install.step);
+    // default (only build)
+    b.getInstallStep().dependOn(&limine_bios_install.step);
+
     run_cmd.step.dependOn(b.getInstallStep());
 
+    // build and run
     const run_step = b.step("run", "Run the OS in qemu");
     run_step.dependOn(&run_cmd.step);
-
-    const build_step = b.step("build", "Build the OS");
-    build_step.dependOn(&limine_bios_install.step);
 }

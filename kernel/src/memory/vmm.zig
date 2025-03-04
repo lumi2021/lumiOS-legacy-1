@@ -28,10 +28,10 @@ pub fn init(memmap: []*MemMapEntry) !void {
 
     st.enabled = false;
 
-    write.dbg("phys mapping range of {d} bits ({} bytes)", .{ phys_mapping_range_bits, @as(usize, 1) << phys_mapping_range_bits });
+    write.dbg("phys mapping range of {d} bits (0x{X} bytes)", .{ phys_mapping_range_bits, @as(usize, 1) << phys_mapping_range_bits });
     try paging.map_range(0, idmap_base, @as(usize, 1) << phys_mapping_range_bits);
 
-    write.dbg("mapping bottom {X} at 0x{X}", .{ base_phys, base_linear });
+    write.dbg("mapping bottom {X} at 0x{X} (0x{X} bytes)", .{ base_phys, base_linear, pmm.kernel_size });
     try paging.map_range(base_phys, base_linear, pmm.kernel_size);
 
     write.dbg("finished page tables, applying...", .{});
