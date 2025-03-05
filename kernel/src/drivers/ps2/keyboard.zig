@@ -5,7 +5,7 @@ const ports = os.port_io;
 const intman = os.system.interrupt_manager;
 const IntFrame = os.theading.TaskContext;
 
-const log = os.console_write("Keyboard");
+const write = os.console_write("keyboard");
 const st = os.stack_tracer;
 
 const KeyboardState = @import("keyboard/state.zig");
@@ -26,17 +26,16 @@ pub fn init() void {
 }
 
 fn keyboard_interrupt_handler(_: *IntFrame) void {
-    st.push(@src());
-    defer st.pop();
+    st.push(@src()); defer st.pop();
 
     if (ports.inb(0x64) & 1 != 0) {
         const scancode = ports.inb(0x60);
 
-        keyboard_buffer_data[keyboard_buffer_elements] = scancode;
-        keyboard_buffer_elements += 1;
+        //keyboard_buffer_data[keyboard_buffer_elements] = scancode;
+        //keyboard_buffer_elements += 1;
 
-        log.log("keyboard pressed! scancode: {X}", .{scancode});
-        kbEvent();
+        write.dbg("keyboard data received: {X}", .{scancode});
+        //kbEvent();
     }
 
     eoi();
@@ -171,7 +170,7 @@ fn keyLocation(ext: Extendedness, scancode: u8) !kb.keys.Location {
                 0x58 => .f12,
 
                 else => {
-                    log.err("Unhandled scancode 0x{X}", .{scancode});
+                    write.err("Unhandled scancode 0x{X}", .{scancode});
                     return error.UnknownScancode;
                 },
             };
@@ -204,7 +203,7 @@ fn keyLocation(ext: Extendedness, scancode: u8) !kb.keys.Location {
                 0x5D => .option_key,
 
                 else => {
-                    log.err("Unhandled extended scancode 0x{X}", .{scancode});
+                    write.err("Unhandled extended scancode 0x{X}", .{scancode});
                     return error.UnknownScancode;
                 },
             };

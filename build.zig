@@ -69,14 +69,13 @@ pub fn build(b: *Build) void {
         "-device", "ide-hd,drive=drive0,bus=ahci.0",
 
         "-device", "qemu-xhci,id=usb",
-        "-device", "usb-kbd",
         "-device", "usb-mouse",
 
         // Debug
         "-D", "log.txt",
-        "-d", "int,cpu_reset",
-        "--no-reboot",
-        "--no-shutdown",
+        //"-d", "int,cpu_reset",
+        //"--no-reboot",
+        //"--no-shutdown",
         "-s",
         //"-trace", "*xhci*",
 

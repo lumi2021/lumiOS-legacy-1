@@ -40,4 +40,11 @@ pub fn puts(msg: []const u8) void {
         }
     }
 
+    var c = col;
+    while (c < getConWidth()) : (c += 1) {
+        const line_pixels = line * 16;
+        const col_pixels = c * 8;
+        gl.text.drawCharBg(' ', col_pixels, line_pixels);
+    }
+
 }

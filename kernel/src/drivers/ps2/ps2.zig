@@ -310,7 +310,7 @@ fn awaitAck() !void {
             // Resend
             0xFE => return error.Resend,
 
-            else => log.err("Got a different value: 0x{X}", .{v}),
+            else => log.dbg("Got a different value: 0x{X}", .{v}),
         }
     }
 }

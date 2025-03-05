@@ -20,7 +20,7 @@ pub const debug_ignore: []const KeyValuePair = &[_]KeyValuePair{
 
     // interruptions
     .{ .key = "IDTM", .value = ignore_all },
-    .{ .key = "syscall", .value = default },
+    .{ .key = "syscall", .value = ignore_all },
 
     // file system
     .{ .key = "fs", .value = default },
@@ -28,9 +28,10 @@ pub const debug_ignore: []const KeyValuePair = &[_]KeyValuePair{
 
     // Drivers related
     .{ .key = "Drivers", .value = ignore_all },
-    .{ .key = "PCI", .value = ignore_all },
+    .{ .key = "PCI", .value = default },
     .{ .key = "ps2", .value = default },
-    .{ .key = "Keyboard", .value = default },
+    .{ .key = "keyboard", .value = default },
+    .{ .key = "mouse", .value = default },
 
     // Allocations
     .{ .key = "Alloc", .value = ignore_all },

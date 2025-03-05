@@ -5,7 +5,7 @@ const ports = os.port_io;
 const intman = os.system.interrupt_manager;
 const IntFrame = os.theading.TaskContext;
 
-const log = os.console_write("Keyboard");
+const write = os.console_write("mouse");
 const st = os.stack_tracer;
 
 pub fn init() void {
@@ -13,14 +13,12 @@ pub fn init() void {
 }
 
 fn mouse_interrupt_handler(_: *IntFrame) void {
-    st.push(@src());
-    defer st.pop();
+    st.push(@src()); defer st.pop();
 
     if (ports.inb(0x64) & 1 != 0) {
         const data = ports.inb(0x60);
 
-        _ = data;
-        //log.dbg("mouse data received: {X}", .{data});
+        write.dbg("mouse data received: {X}", .{data});
     }
 
     eoi();
