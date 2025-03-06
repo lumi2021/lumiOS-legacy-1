@@ -20,6 +20,7 @@ pub const Task = struct {
     name: [:0]u8,
     id: usize,
     state: TaskState,
+    waitingFor: TaskWaitingDetails,
 
     entry_pointer: usize,
     args_pointer: usize,
@@ -116,5 +117,15 @@ pub const Task = struct {
 pub const TaskState = enum {
     new,
     ready,
-    running
+    running,
+    awaiting,
+};
+
+pub const TaskWaitingDetailsTag = enum {
+    pipe
+};
+pub const TaskWaitingDetails = union(TaskWaitingDetailsTag) {
+    pipe: struct {
+        pipePtr: *Pipe
+    },
 };

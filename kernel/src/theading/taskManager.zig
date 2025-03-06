@@ -60,8 +60,6 @@ pub fn run_process(taskName: [:0]u8, entry: ProcessEntryFunction, args: ?*const 
     var buf: [128]u8 = undefined;
     const procdir = fs.make_dir(std.fmt.bufPrint(&buf, "sys:/proc/{X:0>5}", .{tid}) catch unreachable) catch unreachable;
     _ = procdir.branch("stdio", .{ .pipe = .{ .pipePtr = task.stdio } });
-
-    fs.lsnode(procdir);
 }
 
 pub fn kill_process(tid: usize) void {

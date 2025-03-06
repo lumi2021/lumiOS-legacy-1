@@ -24,6 +24,7 @@ pub export fn doSystemCall(A: SystemCall, B: usize, C: usize, D: usize, E: usize
         : "rbx", "rcx", "r11", "memory"
     );
 
+    if (err == .InvalidSyscall) @panic("Invalid system call requested!");
     return .{ .err = err, .res = result };
 }
 

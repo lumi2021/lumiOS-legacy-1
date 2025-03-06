@@ -9,7 +9,7 @@ const st = os.stack_tracer;
 
 pub const Pipe = struct {
 
-    pub const PipeBuffer = std.fifo.LinearFifo([] u8, .Dynamic);
+    pub const PipeBuffer = std.fifo.LinearFifo([]u8, .Dynamic);
 
     name: []u8,
     buffer: PipeBuffer,
@@ -24,12 +24,15 @@ pub const Pipe = struct {
 
         return this;
     }
-
     pub fn deinit(this: *@This()) void {
         const alloc = os.memory.allocator;
 
         alloc.free(this.name);
         this.buffer.deinit();
+    }
+
+    pub inline fn hasData(this: *@This()) bool {
+        return this.buffer.count > 0;
     }
 
 };

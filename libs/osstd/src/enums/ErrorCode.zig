@@ -2,6 +2,10 @@ pub const ErrorCode = enum(usize) {
     NoError = 0,
     Undefined = 1,
 
+    //    general
+    InvalidSyscall,
+    InvalidDescriptor,
+
     // Memory errors
     OutOfMemory,
 
@@ -14,6 +18,4 @@ pub const ErrorCode = enum(usize) {
     InvalidPath,
     //    permissions
     AccessDenied,
-    //    general
-    InvalidDescriptor
 };

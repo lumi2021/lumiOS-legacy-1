@@ -34,19 +34,31 @@ pub fn close(self: @This()) void {
     _ = root.doSystemCall(.close_file_descriptor, @bitCast(self.descriptor), 0, 0, 0);
 }
 
-pub fn writeBytes(self: @This(), data: []u8) FileError!void {
-    const res = root.doSystemCall(.write, @bitCast(self.descriptor), @intFromPtr(data.ptr), data.len,  0);
-    _ = res;
-    // TODO handle errors
+pub fn writeBytes(self: @This(), data: []u8, pos: usize) FileError!void {
+    const res = root.doSystemCall(.write, @bitCast(self.descriptor), @intFromPtr(data.ptr), data.len, pos);
+    if (res.err != .NoError) return switch (res.err) {
+
+        else => {
+            root.debug.print("Unhandled error: {s}", .{@tagName(res.err)});
+            return error.Undefined;
+        }
+    };
 }
-pub fn readBytes(self: @This()) FileError!void {
-    _ = self;
+pub fn readBytes(self: @This(), buf: []u8, pos: usize) FileError!void {
+    const res = root.doSystemCall(.read, @bitCast(self.descriptor), @intFromPtr(buf.ptr), buf.len, pos);
+    if (res.err != .NoError) return switch (res.err) {
+
+        else => {
+            root.debug.print("Unhandled error: {s}", .{@tagName(res.err)});
+            return error.Undefined;
+        }
+    };
 }
 
 pub fn printf(self: @This(), comptime str: []const u8, args: anytype) FileError!void {
     var buf: [1024]u8 = undefined;
     const res = std.fmt.bufPrint(&buf, str, args) catch unreachable;
-    try self.writeBytes(res);
+    try self.writeBytes(res, 0);
 }
 
 pub const Kind = enum {

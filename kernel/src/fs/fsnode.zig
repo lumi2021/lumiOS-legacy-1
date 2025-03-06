@@ -7,6 +7,7 @@ const ResourceKind = ResourceHandler.Kind;
 const FsNodeList = std.ArrayList(*FsNode);
 pub const FsNode = struct {
     name: []u8,
+    parent: *FsNode,
     children: FsNodeList,
     permissions: struct {
         read: bool,

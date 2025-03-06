@@ -14,7 +14,8 @@ pub const FileAccessFlags = packed struct(u64) {
     _: u60,
 };
 
-var allocator: std.heap.ArenaAllocator = undefined;
+var arena: std.heap.ArenaAllocator = undefined;
+var allocator: std.mem.Allocator = undefined;
 var fileTree: struct {
 
     drives: []*FsNode,
@@ -29,7 +30,8 @@ pub fn init() !void {
     st.push(@src()); defer st.pop();
     write.log("Initializing file system...", .{});
 
-    allocator = std.heap.ArenaAllocator.init(os.memory.allocator);
+    arena = std.heap.ArenaAllocator.init(os.memory.allocator);
+    allocator = arena.allocator();
 
     fileTree.sys = FsNode.init("sys:", .{ .directory = undefined });
 
@@ -88,15 +90,22 @@ pub fn open_file_descriptor(path: [:0]u8, flags: FileAccessFlags) OpenFileError!
     write.log("Trying to open file \"{s}\" (len {})", .{ path, path.len });
 
     const task = schedue.current_task.?;
-    const handler: isize = @intCast(task.get_resource_index() catch 0);
+    const handler: usize = @intCast(task.get_resource_index() catch error._undefined); // FIXME add proper error
     errdefer task.free_resource_index(@bitCast(handler)) catch unreachable;
 
     _ = flags;
 
     const file = try solve_path(path);
-    _ = file;
+    const res = &task.resources[@bitCast(handler)];
+    res.fsnode = file;
 
-    return handler;
+    res.data = switch (file.data) {
+        .pipe => |*e| .{ .pipe = .{ .pipePtr = e.pipePtr } },
+
+        else => return error.invalidPath
+    };
+
+    return @bitCast(handler);
 }
 pub fn close_file_descriptor(handler: usize) void {
     write.log("Closing file descriptor {}", .{handler});
@@ -106,12 +115,32 @@ pub fn close_file_descriptor(handler: usize) void {
     current_task.free_resource_index(handler) catch unreachable;
 }
 
-fn write_file_descriptor(task: *Task, file: usize, data: []u8) OpenFileError!isize {
+pub fn write_file_descriptor(task: *Task, descriptor: usize, data: []u8, pos: usize) OpenFileError!isize {
     st.push(@src()); defer st.pop();
 
-    _ = task;
-    _ = file;
+    const file = task.resources[descriptor];
+    if (file.in_use == false) return error.invalidDescriptor;
+
+    write.log("writing in file \"{s}\"", .{file.path});
+
     _ = data;
+    _ = pos;
+}
+pub fn read_file_descriptor(task: *Task, descriptor: usize, buffer: []u8, pos: usize) ReadFileError!void {
+    st.push(@src()); defer st.pop();
+
+    const fileHandler = &task.resources[descriptor];
+    if (fileHandler.in_use == false) return error.invalidDescriptor;
+    write.dbg("writing in file \"{s}\"", .{fileHandler.fsnode.name});
+
+    const bufcopy = allocator.alloc(u8, pos + buffer.len) catch unreachable;
+    @memset(bufcopy, 0);
+    @memcpy(bufcopy[pos..], buffer);
+
+    switch (fileHandler.data) {
+
+        else => write.err("read from {s} not handled", .{@tagName(fileHandler.data)})
+    }
 }
 
 fn solve_path(path: []const u8) OpenPathError!*FsNode {
@@ -188,10 +217,17 @@ pub const FsNodeData = @import("fsnode.zig").FsNodeData;
 // error tables
 pub const FsError = OpenFileError || OpenPathError;
 
+pub const ReadFileError = error {}
+|| PermitionError
+|| GeneralError;
+pub const WriteFileError = error {}
+|| PermitionError
+|| GeneralError;
+
+
 pub const OpenFileError = error {
     fileNotFound,
     notAFile,
-    invalidDescriptor,
 }
 || OpenPathError
 || PermitionError
@@ -215,4 +251,4 @@ pub const PermitionError = error {
     accessDenied
 };
 
-pub const GeneralError = error { Undefined };
+pub const GeneralError = error { invalidDescriptor, _undefined };

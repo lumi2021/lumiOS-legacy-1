@@ -7,7 +7,7 @@ const write = os.console_write("Interrupt");
 const InterruptFrame = os.theading.TaskContext;
 
 pub fn init() void {
-    st.push(@src());
+    st.push(@src()); defer st.pop();
 
     // Exceptions and faults
     interrupts[0] = handle_divide_by_zero;
@@ -19,24 +19,20 @@ pub fn init() void {
     interrupts[13] = handle_general_protection;
     interrupts[14] = handle_page_fault;
 
+    // random or general interrupts
     interrupts[32] = handle_timer_interrupt;
 
     interrupts[39] = handle_spurious_interrupt;
-
-    st.pop();
 }
 
-pub fn handle_divide_by_zero(_: *InterruptFrame) void {
+pub fn handle_divide_by_zero(frame: *InterruptFrame) void {
     st.push(@src());
-
     write.err("Division by zero!\n", .{});
-
-    try_kill_process();
+    try_kill_process(frame);
 }
 
 pub fn handle_invalid_opcode(frame: *InterruptFrame) void {
     st.push(@src());
-
     write.err("Invalid OpCode!", .{});
 
     if (frame.rip > 0xF000000000000000) {
@@ -52,7 +48,7 @@ pub fn handle_invalid_opcode(frame: *InterruptFrame) void {
         //}
     }
 
-    try_kill_process();
+    try_kill_process(frame);
 }
 
 pub fn handle_general_protection(frame: *InterruptFrame) void {
@@ -91,8 +87,7 @@ pub fn handle_general_protection(frame: *InterruptFrame) void {
         //}
     }
 
-    while (true) {}
-    try_kill_process();
+    @panic("GP Fault");
 }
 
 pub fn handle_page_fault(frame: *InterruptFrame) void {
@@ -108,33 +103,34 @@ pub fn handle_page_fault(frame: *InterruptFrame) void {
     write.err("Page Fault trying to acess ${X:0>16}!", .{addr});
     write.log("\r\n{}", .{frame});
 
-    try_kill_process();
+    try_kill_process(frame);
 }
 
 fn handle_double_fault(frame: *InterruptFrame) void {
     st.push(@src());
 
     var addr: u64 = undefined;
-    asm volatile ("mov %CR2, %[add]"
-        : [add] "=r" (addr),
-    );
+    asm volatile ("mov %CR2, %[add]" : [add] "=r" (addr));
 
     write.err("Double fault! ${X:0>16}!", .{addr});
     write.log("\r\n{}", .{frame});
 
-    try_kill_process();
+    try_kill_process(frame);
 }
 
 fn handle_timer_interrupt(frame: *InterruptFrame) void {
-    st.push(@src());
+    st.push(@src()); defer st.pop();
+
     os.theading.schedue.do_schedue(frame);
-    st.pop();
 }
 
 fn handle_spurious_interrupt(_: *InterruptFrame) void {
 
 }
 
-fn try_kill_process() void {
+fn try_kill_process(ctx: *InterruptFrame) void {
+    st.push(@src());
+
     os.theading.schedue.kill_current_process(-1);
+    os.theading.schedue.do_schedue(ctx);
 }
