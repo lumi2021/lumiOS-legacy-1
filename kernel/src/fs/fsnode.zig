@@ -20,7 +20,7 @@ pub const FsNode = struct {
     
         const this = alloc.create(FsNode) catch unreachable;
         this.name = alloc.alloc(u8, name.len) catch unreachable;
-        this.name = @constCast(name);
+        @memcpy(this.name.ptr, name);
         this.data = data;
         this.children = FsNodeList.init(alloc);
         
@@ -34,7 +34,7 @@ pub const FsNode = struct {
         alloc.free(this);
     }
 
-    pub fn kind(s: *@This()) ResourceKind {
+    pub inline fn kind(s: *@This()) ResourceKind {
         return s.data;
     }
 
@@ -61,9 +61,8 @@ pub const FsNodeData = union(ResourceKind) {
 };
 
 pub const FsNodePipe = struct {
-
+    pipePtr: *os.theading.Pipe
 };
-
 pub const FsNodeSymlink = struct {
     linkTo: []const u8
 };

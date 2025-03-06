@@ -10,10 +10,15 @@ pub fn open(path: [:0]u8, flags: AccessFlags) FileError!@This() {
 
     if (syscall_res.err != .NoError) return switch (syscall_res.err) {
         .FileNotFound => FileError.fileNotFound,
+        .PathNotFound => FileError.pathNotFound,
         .AccessDenied => FileError.accessDenied,
         .InvalidPath => FileError.invalidPath,
         .NotAFile => FileError.notAFile,
-        else => error.Undefined,
+        
+        else => {
+            root.debug.print("unhandled error: {s}\n", .{@tagName(syscall_res.err)});
+            return error.Undefined;
+        }
     };
 
     const descriptor: isize = @bitCast(syscall_res.res);
@@ -59,6 +64,7 @@ pub const AccessFlags = packed struct(u64) {
 };
 pub const FileError = error{
     fileNotFound,
+    pathNotFound,
     accessDenied,
     invalidPath,
     notAFile,

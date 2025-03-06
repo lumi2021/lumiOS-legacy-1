@@ -1,6 +1,7 @@
 const os = @import("root").os;
 const std = @import("std");
 const schedue = os.theading.schedue;
+const fs = os.fs;
 
 const ProcessEntryFunction = os.theading.ProcessEntryFunction;
 const Task = os.theading.Task;
@@ -50,14 +51,23 @@ pub fn run_process(taskName: [:0]u8, entry: ProcessEntryFunction, args: ?*const 
 
     const tid = get_first_free_tid();
     task.id = tid;
+
+    // add task to task list
     task_list[tid] = task;
     thead_count += 1;
+
+    // create task virtual directory
+    var buf: [128]u8 = undefined;
+    const procdir = fs.make_dir(std.fmt.bufPrint(&buf, "sys:/proc/{X:0>5}", .{tid}) catch unreachable) catch unreachable;
+    _ = procdir.branch("stdio", .{ .pipe = .{ .pipePtr = task.stdio } });
+
+    fs.lsnode(procdir);
 }
 
 pub fn kill_process(tid: usize) void {
     st.push(@src()); defer st.pop();
 
-    const curr = task_list[tid].?;
+    const curr = getTask(tid) catch return;
     task_list[tid] = null;
 
     curr.destry();
@@ -68,10 +78,15 @@ pub fn kill_process(tid: usize) void {
     thead_count -= 1;
 }
 
+pub inline fn getTask(tid: usize) error{invalidTid}!*Task {
+    const target = task_list[tid];
+    if (target == null) return error.invalidTid;
+    return target.?;
+}
 pub fn get_first_free_tid() usize {
     st.push(@src()); defer st.pop();
 
-    for (task_list, 0..) |e, i| {
+    for (task_list, 1..) |e, i| {
         if (e == null) return i;
     }
     

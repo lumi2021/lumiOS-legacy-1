@@ -27,8 +27,6 @@ pub fn puts(msg: []const u8) void {
             col = 0;
         } else if (c == '\r') {
             col = 0;
-        } else if (c == 0) {
-            break;
         } else {
             const line_pixels = line * 16;
             const col_pixels = col * 8;

@@ -1,26 +1,10 @@
-const std = @import("std");
-const os = @import("root").os;
-const schedue = os.theading.schedue;
-
-const Task = os.theading.Task;
-const ResourceHandler = os.system.ResourceHandler;
-
-const FAT = @import("formats/FAT.zig");
-
-const disk = os.drivers.disk;
-
-const write = os.console_write("fs");
-const st = os.stack_tracer;
-
-pub const FsNode = @import("fsnode.zig").FsNode;
-
 // File system:
 //     <letter>:/      - default partitions
-//     sys:/           - virtual directories
-//      |- dev/        - devices
+//     sys:/           - virtual system directories
 //      '_ proc/       - processes
 //          |- self    - caller process dir
 //          '- <pid>   - specific process dir
+//     dev:/           - virtual device interfaces
 
 pub const FileAccessFlags = packed struct(u64) {
     read: bool,
@@ -53,10 +37,48 @@ pub fn init() !void {
         _ = dev;
     }
     const proc = fileTree.sys.branch("proc", .{ .directory = undefined }); {
-        _ = proc.branch("self", .{ .symlink = .{ .linkTo = "sys:/proc/$PROC_ID" } });
+        _ = proc.branch("self", .{ .symlink = .{ .linkTo = "sys:/proc/$THREAD_ID" } });
     }
 }
 
+pub fn ls(path: []const u8) void {
+    lsnode(solve_path(path) catch |err| {
+        write.err("error: {s}", .{@errorName(err)});
+        return;
+    });
+}
+pub fn lsnode(node: *FsNode) void {
+    for (node.children.items) |e| {
+        write.raw("{s: <15}{s}\n", .{e.name, @tagName(e.kind())});
+    }
+}
+
+pub fn make_dir(path: []const u8) (OpenPathError || CreateError)!*FsNode {
+    st.push(@src()); defer st.pop();
+
+    const last_slash = std.mem.lastIndexOf(u8, path, "/") orelse return OpenPathError.invalidPath;
+    const subpath = path[0..last_slash];
+    
+    var subdir = try solve_path(subpath);
+    if (subdir.kind() != .directory) return OpenPathError.notADirectory;
+
+    if (subdir.getChild(path[(last_slash + 1)..]) != null) return error.nameAlreadyExists;
+    return subdir.branch(path[(last_slash + 1)..], .{ .directory = undefined });
+}
+pub fn make_file(path: []const u8, data: FsNodeData) (OpenPathError || CreateError)!void {
+    st.push(@src()); defer st.pop();
+
+    const last_slash = std.mem.lastIndexOf(u8, path, "/") orelse return OpenPathError.invalidPath;
+    const subpath = path[0..last_slash];
+    
+    var subdir = try solve_path(subpath);
+    if (subdir.kind() != .directory) return OpenPathError.notADirectory;
+
+    if (subdir.getChild(path[(last_slash + 1)..]) != null) return error.nameAlreadyExists;
+    return subdir.branch(path[(last_slash + 1)..], data);
+}
+
+// system call actions
 pub fn open_file_descriptor(path: [:0]u8, flags: FileAccessFlags) OpenFileError!isize {
     st.push(@src()); defer st.pop();
 
@@ -71,50 +93,8 @@ pub fn open_file_descriptor(path: [:0]u8, flags: FileAccessFlags) OpenFileError!
 
     _ = flags;
 
-    var iter = std.mem.tokenizeAny(u8, path, "/");
-    var cur: *FsNode = try get_tree_root(iter.next().?);
-
-    var s = iter.next();
-    while (s != null) : ({
-        s = iter.next();
-        write.dbg("{s}", .{s orelse "null"});
-    }) {
-        var step = s.?;
-
-        // variables
-        if (step[0] == '$') {
-
-            if (std.mem.eql(u8, step[1..], "PROC_ID")) {
-                write.log("iterating: {s} - variable", .{step});
-
-                var str: [16]u8 = undefined;
-                const l = std.fmt.formatIntBuf(&str, task.id, 16, .lower, .{});
-                cur = cur.getChild(str[0..l]).?;
-            }
-
-            else return error.fileNotFound;
-        }
-
-        else if (cur.getChild(step)) |c| {
-            write.log("iterating: {s} - {s}", .{step, @tagName(c.kind())});
-
-            switch (c.data) {
-                .symlink => {
-                    iter = std.mem.tokenizeAny(u8, c.data.symlink.linkTo, "/");
-                    s = iter.next();
-
-                    if (s == null) return error.invalidPath
-                    else if (s.?[s.?.len - 1] == ':') cur = try get_tree_root(s.?)
-                    else iter.reset();
-                },
-                .directory => cur = c,
-
-                else => return error.fileNotFound
-            }
-        }
-        else return error.fileNotFound;
-
-    }
+    const file = try solve_path(path);
+    _ = file;
 
     return handler;
 }
@@ -134,25 +114,105 @@ fn write_file_descriptor(task: *Task, file: usize, data: []u8) OpenFileError!isi
     _ = data;
 }
 
-
-fn get_tree_root(token: []const u8) error{invalidPath}!*FsNode {
+fn solve_path(path: []const u8) OpenPathError!*FsNode {
     st.push(@src()); defer st.pop();
-    errdefer write.dbg("{s} was not a root!", .{token});
 
-    write.dbg("testing if {s} is root or not", .{token});
+    var iter = std.mem.tokenizeAny(u8, path, "/");
+    var cur: *FsNode = try get_tree_root(iter.next().?);
+
+    var s = iter.next();
+    while (s != null) : (s = iter.next()) {
+        var step = s.?;
+
+        // variables
+        if (step[0] == '$') {
+
+            if (std.mem.eql(u8, step[1..], "THREAD_ID")) {
+                var str: [16]u8 = undefined;
+                step = std.fmt.bufPrint(&str, "{X:0>5}", .{schedue.current_task.?.id}) catch unreachable;
+            }
+            else return error.pathNotFound;
+        }
+
+        if (cur.getChild(step)) |c| {
+            switch (c.data) {
+                .symlink => {
+                    write.log("branching into symbolic link \"{s}\"", .{c.data.symlink.linkTo});
+                    cur = try solve_path(c.data.symlink.linkTo);
+                    if (cur.kind() != .directory) return error.notADirectory;
+                },
+                .directory => cur = c,
+                
+                else => return c
+            }
+        }
+        else {
+            write.warn("searching for: {s}", .{step});
+            lsnode(cur);
+            return error.pathNotFound;
+        }
+    }
+
+    return cur;
+}
+fn get_tree_root(token: []const u8) OpenPathError!*FsNode {
+    st.push(@src()); defer st.pop();
 
     if (token.len <= 3 or token[token.len - 1] != ':') return error.invalidPath;
 
+    // TODO normal drives
     if (token.len == 4 and std.mem.eql(u8, token, "sys:")) return fileTree.sys
     else if (token.len == 4 and std.mem.eql(u8, token, "dev:")) return fileTree.dev
+
     else return error.invalidPath;
 }
 
-pub const OpenFileError = error{
+// imports
+const std = @import("std");
+const os = @import("root").os;
+const schedue = os.theading.schedue;
+
+const Task = os.theading.Task;
+const ResourceHandler = os.system.ResourceHandler;
+
+const FAT = @import("formats/FAT.zig");
+
+const disk = os.drivers.disk;
+
+const write = os.console_write("fs");
+const st = os.stack_tracer;
+
+pub const FsNode = @import("fsnode.zig").FsNode;
+pub const FsNodeData = @import("fsnode.zig").FsNodeData;
+
+// error tables
+pub const FsError = OpenFileError || OpenPathError;
+
+pub const OpenFileError = error {
     fileNotFound,
-    invalidPath,
-    accessDenied,
-    invalidDescriptor,
     notAFile,
-    Undefined,
+    invalidDescriptor,
+}
+|| OpenPathError
+|| PermitionError
+|| GeneralError;
+
+pub const OpenPathError = error {
+    invalidPath,
+    pathNotFound,
+    notADirectory
+}
+|| GeneralError;
+
+pub const CreateError = error {
+    nameAlreadyExists
+}
+|| OpenPathError
+|| PermitionError
+|| GeneralError;
+
+pub const PermitionError = error {
+    accessDenied
 };
+
+pub const GeneralError = error { Undefined };

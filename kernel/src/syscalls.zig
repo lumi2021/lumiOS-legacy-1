@@ -100,6 +100,9 @@ fn error_to_enum(err: anyerror) ErrorCode {
         error.notAFile =>           .NotAFile,
         error.invalidPath =>        .InvalidPath,
 
-        else => .Undefined,
+        else => {
+            write.warn("unhandled error: {s}", .{@errorName(err)});
+            return .Undefined;
+        }
     };
 }
