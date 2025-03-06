@@ -92,10 +92,13 @@ fn syscall_04_write(handler: usize, bytes: usize, length: usize, pos: usize) Sys
 
 fn error_to_enum(err: anyerror) ErrorCode {
     return switch (err) {
-        error.outOfMemory => .OutOfMemory,
-        error.pathNotFound => .PathNotFound,
-        error.fileNotFound => .FileNotFound,
-        error.accessDenied => .AccessDenied,
+        error.outOfMemory =>        .OutOfMemory,
+        error.pathNotFound =>       .PathNotFound,
+        error.fileNotFound =>       .FileNotFound,
+        error.accessDenied =>       .AccessDenied,
+        error.invalidDescriptor =>  .InvalidDescriptor,
+        error.notAFile =>           .NotAFile,
+        error.invalidPath =>        .InvalidPath,
 
         else => .Undefined,
     };

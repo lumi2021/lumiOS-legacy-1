@@ -11,7 +11,6 @@ pub const theading = @import("theading/theading.zig");
 
 pub const memory = @import("memory/memory.zig");
 pub const fs = @import("fs/fs.zig");
-pub const vfs = @import("fs/vfs.zig");
 
 pub const drivers = @import("drivers/drivers.zig");
 

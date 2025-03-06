@@ -3,6 +3,7 @@ const std = @import("std");
 pub const ResourceHandler = struct {
     in_use: bool,
     path: []u8,
+    taskid: usize,
 
     data: union(Kind) {
         file: ResourceHandlerData_File,

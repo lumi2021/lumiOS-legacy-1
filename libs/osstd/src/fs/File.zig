@@ -9,8 +9,10 @@ pub fn open(path: [:0]u8, flags: AccessFlags) FileError!@This() {
     const syscall_res = root.doSystemCall(.open_file_descriptor, @intFromPtr(path.ptr), @bitCast(flags), 0, 0);
 
     if (syscall_res.err != .NoError) return switch (syscall_res.err) {
-        .FileNotFound => error.fileNotFound,
-        .AccessDenied => error.accessDenied,
+        .FileNotFound => FileError.fileNotFound,
+        .AccessDenied => FileError.accessDenied,
+        .InvalidPath => FileError.invalidPath,
+        .NotAFile => FileError.notAFile,
         else => error.Undefined,
     };
 
@@ -58,5 +60,8 @@ pub const AccessFlags = packed struct(u64) {
 pub const FileError = error{
     fileNotFound,
     accessDenied,
+    invalidPath,
+    notAFile,
+
     Undefined,
 };

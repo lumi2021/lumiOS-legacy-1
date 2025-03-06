@@ -56,7 +56,7 @@ pub fn build(b: *Build) void {
         "qemu-system-x86_64",
         
         "-M", "q35",
-        "-bios", "deps/debug/OVMF.fd", // for UEFI emulation (not recommended)
+        //"-bios", "deps/debug/OVMF.fd", // for UEFI emulation (not recommended)
         "-m", "512M",
 
         // serial, video, etc

@@ -43,7 +43,6 @@ pub fn main(binfo: BootInfo) noreturn {
 
     write.log("# Starting file systems...", .{});
     try os.fs.init();
-    try os.vfs.init();
 
     write.log("# Starting drivers...", .{});
     os.drivers.init_all_drivers() catch |err| @panic(@errorName(err));

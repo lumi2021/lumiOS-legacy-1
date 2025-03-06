@@ -6,7 +6,14 @@ pub const ErrorCode = enum(usize) {
     OutOfMemory,
 
     // File system errors
-    PathNotFound,
+    //    file
     FileNotFound,
+    NotAFile,
+    //    path
+    PathNotFound,
+    InvalidPath,
+    //    permissions
     AccessDenied,
+    //    general
+    InvalidDescriptor
 };

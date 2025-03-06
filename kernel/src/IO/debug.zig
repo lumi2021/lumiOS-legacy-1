@@ -42,7 +42,6 @@ pub fn write(comptime tag: []const u8) type {
 
         pub const raw = struct {
             pub inline fn f(comptime fmt: []const u8, args: anytype) void {
-                if (isLogDisabled(tag)) return;
                 printf(fmt, args);
                 bcom.printf(fmt, args);
             }

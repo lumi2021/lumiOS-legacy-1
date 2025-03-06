@@ -6,7 +6,8 @@ pub const input = .{
 pub const max_ioapics = 5;
 
 pub const debug_ignore: []const KeyValuePair = &[_]KeyValuePair{
-    .{ .key = "Main", .value = default },
+    // main setup
+    .{ .key = "Main", .value = ignore_all },
     
     // memory
     .{ .key = "PMM", .value = ignore_all },
@@ -28,10 +29,10 @@ pub const debug_ignore: []const KeyValuePair = &[_]KeyValuePair{
 
     // Drivers related
     .{ .key = "Drivers", .value = ignore_all },
-    .{ .key = "PCI", .value = default },
-    .{ .key = "ps2", .value = default },
-    .{ .key = "keyboard", .value = default },
-    .{ .key = "mouse", .value = default },
+    .{ .key = "PCI", .value = ignore_all },
+    .{ .key = "ps2", .value = ignore_all },
+    .{ .key = "keyboard", .value = ignore_all },
+    .{ .key = "mouse", .value = ignore_all },
 
     // Allocations
     .{ .key = "Alloc", .value = ignore_all },
