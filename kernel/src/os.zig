@@ -1,6 +1,6 @@
 pub const uart = @import("IO/uart.zig");
 pub const port_io = @import("IO/port_io.zig");
-pub const console_write = @import("IO/debug.zig").write;
+pub const console_write = @import("debug/log.zig").write;
 
 pub const boot_info = @import("boot/boot_info.zig");
 

@@ -16,19 +16,20 @@ pub const debug_ignore: []const KeyValuePair = &[_]KeyValuePair{
 
     // threading
     .{ .key = "schedue", .value = ignore_all },
-    .{ .key = "taskman", .value = default },
-    .{ .key = "task", .value = default },
+    .{ .key = "taskman", .value = ignore_all },
+    .{ .key = "task", .value = ignore_all },
 
     // interruptions
     .{ .key = "IDTM", .value = ignore_all },
     .{ .key = "syscall", .value = ignore_all },
 
     // file system
-    .{ .key = "fs", .value = default },
+    .{ .key = "fs", .value = ignore_all },
 
     // Drivers related
     .{ .key = "Drivers", .value = ignore_all },
-    .{ .key = "PCI", .value = ignore_all },
+    .{ .key = "PCI", .value = default },
+    .{ .key = "xHCI", .value = ignore_all },
     .{ .key = "ps2", .value = ignore_all },
     .{ .key = "keyboard", .value = ignore_all },
     .{ .key = "mouse", .value = ignore_all },

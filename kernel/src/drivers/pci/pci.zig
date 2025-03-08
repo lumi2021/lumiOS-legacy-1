@@ -5,6 +5,11 @@ const port = os.port_io;
 const xhci = @import("../usb/xhci.zig");
 
 const write = os.console_write("PCI");
+const printf = struct {
+    pub inline fn f(comptime fmt: []const u8, args: anytype) void {
+        if (write.isModeEnabled(.Log)) write.raw(fmt, args);
+    }
+}.f;
 const st = os.stack_tracer;
 
 pub const regoff = u8;
@@ -58,90 +63,68 @@ pub const Addr = struct {
     }
 };
 
-const BarInfo = struct {
+pub const BarInfo = struct {
     phy: u64,
     size: u64,
 };
 
 pub fn init() !void {
-    st.push(@src());
+    st.push(@src()); defer st.pop();
 
     write.log("Scanning bus root...", .{});
     bus_scan(0);
     write.log("Scan complete!", .{});
-
-    st.pop();
 }
 
 fn bus_scan(bus: u8) void {
-    st.push(@src());
+    st.push(@src()); defer st.pop();
 
     inline for (0..(1 << 5)) |device| {
         device_scan(bus, @intCast(device));
     }
-
-    st.pop();
 }
 
 pub fn device_scan(bus: u8, device: u5) void {
-    st.push(@src());
+    st.push(@src()); defer st.pop();
 
     const nullfunc: Addr = .{ .bus = bus, .device = device, .function = 0 };
 
-    if (nullfunc.header_type().read() == 0xFFFF) {
-        st.pop();
-        return;
-    }
+    if (nullfunc.header_type().read() == 0xFFFF) return;
 
     function_scan(nullfunc);
 
-    if (nullfunc.header_type().read() & 0x80 == 0) {
-        st.pop();
-        return;
-    }
+    if (nullfunc.header_type().read() & 0x80 == 0) return;
 
     inline for (0..((1 << 3) - 1)) |function| {
         function_scan(.{ .bus = bus, .device = device, .function = @intCast(function + 1) });
     }
-
-    st.pop();
 }
 
 pub fn function_scan(addr: Addr) void {
-    st.push(@src());
+    st.push(@src()); defer st.pop();
 
-    if (addr.vendor_id().read() == 0xFFFF) {
-        st.pop();
-        return;
-    }
+    if (addr.vendor_id().read() == 0xFFFF) return;
 
     switch (addr.base_class().read()) {
-        else => {
-            write.log(" - Unknown class!", .{});
-        },
+        else => printf(" - Unknown class ({X:2}:{X:2})!\r\n", .{addr.base_class().read(), addr.sub_class().read()}),
+
         0x00 => {
             switch (addr.sub_class().read()) {
-                else => {
-                    write.log(" - Unknown unclassified device!", .{});
-                },
+                else => printf(" - Unknown unclassified device ({X:2}:{X:2})!\r\n", .{addr.base_class().read(), addr.sub_class().read()}),
             }
         },
         0x01 => {
             switch (addr.sub_class().read()) {
-                else => {
-                    write.log(" - Unknown storage controller!", .{});
-                },
+                else => printf(" - Unknown storage controller ({X:2}:{X:2})!\r\n", .{addr.base_class().read(), addr.sub_class().read()}),
                 0x06 => {
-                    write.log(" - AHCI controller", .{});
-                    os.drivers.disk.register_SATA_drive(addr);
+                    printf(" - AHCI controller\r\n", .{});
+                    os.drivers.disk.register_AHCI_drive(addr);
                 },
                 0x08 => {
                     switch (addr.prog_if().read()) {
-                        else => {
-                            write.log(" - Unknown non-volatile memory controller!", .{});
-                        },
+                        else => printf(" - Unknown non-volatile memory controller\r\n", .{}),
                         0x02 => {
-                            write.log(" - NVMe controller", .{});
+                            printf(" - NVMe controller\r\n", .{});
                         },
                     }
                 },
@@ -149,61 +132,51 @@ pub fn function_scan(addr: Addr) void {
         },
         0x02 => {
             switch (addr.sub_class().read()) {
-                else => {
-                    write.log(" - Unknown network controller!", .{});
-                },
+                else => printf(" - Unknown network controller ({X:2}:{X:2})!\r\n", .{addr.base_class().read(), addr.sub_class().read()}),
                 0x00 => {
                     if (addr.vendor_id().read() == 0x8086 and addr.device_id().read() == 0x100E) {
-                        write.log(" - E1000 controller", .{});
-                    } else {
-                        write.log(" - Unknown ethernet controller", .{});
-                    }
+                        printf(" - E1000 controller\r\n", .{});
+                    } else printf(" - Unknown ethernet controller\r\n", .{});
                 },
                 0x80 => {
-                    write.log(" - Other network controller", .{});
+                    printf(" - Other network controller\r\n", .{});
                 },
             }
         },
         0x03 => {
             if (addr.vendor_id().read() == 0x1AF4 and addr.device_id().read() == 0x1050) {
-                write.log("Virtio display controller", .{});
+                printf("Virtio display controller\r\n", .{});
             } else switch (addr.sub_class().read()) {
-                else => {
-                    write.log(" - Unknown display controller!", .{});
-                },
+                else => printf(" - Unknown display controller ({X:2}:{X:2})!\r\n", .{addr.base_class().read(), addr.sub_class().read()}),
                 0x00 => {
-                    write.log(" - VGA compatible controller", .{});
+                    printf(" - VGA compatible controller\r\n", .{});
                 },
             }
         },
         0x04 => {
             switch (addr.sub_class().read()) {
-                else => {
-                    write.log(" - Unknown multimedia controller!", .{});
-                },
+                else => printf(" - Unknown multimedia controller ({X:2}:{X:2})!\r\n", .{addr.base_class().read(), addr.sub_class().read()}),
                 0x03 => {
-                    write.log(" - Audio device", .{});
+                    printf(" - Audio device\r\n", .{});
                 },
             }
         },
         0x06 => {
             switch (addr.sub_class().read()) {
-                else => {
-                    write.log(" - Unknown bridge device!", .{});
-                },
+                else => printf(" - Unknown bridge device ({X:2}:{X:2})!\r\n", .{addr.base_class().read(), addr.sub_class().read()}),
                 0x00 => {
-                    write.log(" - Host bridge", .{});
+                    printf(" - Host bridge\r\n", .{});
                 },
                 0x01 => {
-                    write.log(" - ISA bridge", .{});
+                    printf(" - ISA bridge\r\n", .{});
                 },
                 0x04 => {
-                    write.log(" - PCI-to-PCI bridge", .{});
+                    printf(" - PCI-to-PCI bridge", .{});
                     if ((addr.header_type().read() & 0x7F) != 0x01) {
-                        write.log("Not PCI-to-PCI bridge header type!", .{});
+                        printf(" (Not PCI-to-PCI bridge header type!)\r\n", .{});
                     } else {
                         const secondary_bus = addr.secondary_bus().read();
-                        write.log(", recursively scanning bus {0X}", .{secondary_bus});
+                        printf(", recursively scanning bus {0X}\r\n", .{secondary_bus});
                         bus_scan(secondary_bus);
                     }
                 },
@@ -211,19 +184,15 @@ pub fn function_scan(addr: Addr) void {
         },
         0x0c => {
             switch (addr.sub_class().read()) {
-                else => {
-                    write.log(" - Unknown serial bus controller!", .{});
-                },
+                else => printf(" - Unknown serial bus controller ({X:2}:{X:2})!\r\n", .{addr.base_class().read(), addr.sub_class().read()}),
                 0x03 => {
                     switch (addr.prog_if().read()) {
-                        else => {
-                            write.log(" - Unknown USB controller!", .{});
-                        },
+                        else => printf(" - Unknown USB controller\r\n", .{}),
                         0x20 => {
-                            write.log(" - USB2 EHCI controller", .{});
+                            printf(" - USB2 EHCI controller\r\n", .{});
                         },
                         0x30 => {
-                            write.log(" - USB3 XHCI controller", .{});
+                            printf(" - USB3 XHCI controller\r\n", .{});
                             xhci.register_device(addr);
                         },
                     }
@@ -231,8 +200,6 @@ pub fn function_scan(addr: Addr) void {
             }
         },
     }
-
-    st.pop();
 }
 
 fn cfgreg(comptime T: type, comptime off: regoff) fn (self: Addr) PciFn(T, off) {
