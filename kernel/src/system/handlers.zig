@@ -11,19 +11,27 @@ pub const ResourceHandler = struct {
     data: ResourceHandlerData,
 
     pub const Kind = enum {
+        // devices shit
+        device,
+        disk,
+
+        // virtual shit
         file,
         directory,
+        virtual_directory,
         symlink,
-        device,
         pipe
     };
 };
 
 const ResourceHandlerData = union(ResourceHandler.Kind) {
+    device: ResourceHandlerData_Device,
+    disk: void,
+
     file: ResourceHandlerData_File,
     directory: void,
+    virtual_directory: void,
     symlink: void,
-    device: ResourceHandlerData_Device,
     pipe: ResourceHandlerData_Pipe,
 };
 

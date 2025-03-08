@@ -18,7 +18,7 @@ var arena: std.heap.ArenaAllocator = undefined;
 var allocator: std.mem.Allocator = undefined;
 var fileTree: struct {
 
-    drives: []*FsNode,
+    drives: []?*FsNode,
 
     sys: *FsNode,
     dev: *FsNode,
@@ -33,17 +33,27 @@ pub fn init() !void {
     arena = std.heap.ArenaAllocator.init(os.memory.allocator);
     allocator = arena.allocator();
 
-    fileTree.sys = FsNode.init("sys:", .{ .directory = undefined });
+    fileTree.drives = allocator.alloc(?*FsNode, 16) catch undefined;
+    @memset(fileTree.drives, null);
 
-    const dev = fileTree.sys.branch("dev", .{ .directory = undefined }); {
-        _ = dev;
+    fileTree.sys = FsNode.init("sys:", .{ .virtual_directory = undefined }); {
+        const proc = fileTree.sys.branch("proc", .{ .virtual_directory = undefined }); {
+            _ = proc.branch("self", .{ .symlink = .{ .linkTo = "sys:/proc/$THREAD_ID" } });
+        }
     }
-    const proc = fileTree.sys.branch("proc", .{ .directory = undefined }); {
-        _ = proc.branch("self", .{ .symlink = .{ .linkTo = "sys:/proc/$THREAD_ID" } });
+    const dev = fileTree.sys.branch("dev:", .{ .virtual_directory = undefined }); {
+        _ = dev;
     }
 }
 
 pub fn ls(path: []const u8) void {
+    if (std.mem.eql(u8, path, "")) {
+        for (fileTree.drives) |i| { if (i) |e| write.raw("{s: <15}{s}\n", .{e.name, @tagName(e.kind())}); }
+        write.raw("sys:           virtual_directory\n", .{});
+        write.raw("dev:           virtual_directory\n", .{});
+        return;
+    }
+
     lsnode(solve_path(path) catch |err| {
         write.err("error: {s}", .{@errorName(err)});
         return;
@@ -55,6 +65,21 @@ pub fn lsnode(node: *FsNode) void {
     }
 }
 
+pub fn append_drive() usize {
+    const drive_idx = brk: {
+        for (0 .. fileTree.drives.len) |i| {
+            if (fileTree.drives[i] == null) break :brk i;
+        }
+        // TODO fix support for more disks
+        @panic("WTF who have more than 16 disks in a fucking computer????");
+    };
+
+    const drive_name: [2]u8 = .{('A' + @as(u8, @intCast(drive_idx))), ':'};
+    fileTree.drives[drive_idx] = FsNode.init(&drive_name, .{ .disk = undefined });
+
+    return drive_idx;
+}
+
 pub fn make_dir(path: []const u8) (OpenPathError || CreateError)!*FsNode {
     st.push(@src()); defer st.pop();
 
@@ -62,10 +87,15 @@ pub fn make_dir(path: []const u8) (OpenPathError || CreateError)!*FsNode {
     const subpath = path[0..last_slash];
     
     var subdir = try solve_path(subpath);
-    if (subdir.kind() != .directory) return OpenPathError.notADirectory;
+    if (subdir.kind() != .directory and subdir.kind() != .virtual_directory)
+        return OpenPathError.notADirectory;
 
     if (subdir.getChild(path[(last_slash + 1)..]) != null) return error.nameAlreadyExists;
-    return subdir.branch(path[(last_slash + 1)..], .{ .directory = undefined });
+
+    if (subdir.kind() == .virtual_directory)
+        return subdir.branch(path[(last_slash + 1)..], .{ .virtual_directory = undefined })
+    else
+        return subdir.branch(path[(last_slash + 1)..], .{ .directory = undefined });
 }
 pub fn make_file(path: []const u8, data: FsNodeData) (OpenPathError || CreateError)!void {
     st.push(@src()); defer st.pop();
@@ -138,7 +168,6 @@ pub fn read_file_descriptor(task: *Task, descriptor: usize, buffer: []u8, pos: u
     @memcpy(bufcopy[pos..], buffer);
 
     switch (fileHandler.data) {
-
         else => write.err("read from {s} not handled", .{@tagName(fileHandler.data)})
     }
 }
@@ -212,6 +241,7 @@ const write = os.console_write("fs");
 const st = os.stack_tracer;
 
 pub const FsNode = @import("fsnode.zig").FsNode;
+pub const FsNodeList = @import("fsnode.zig").FsNodeList;
 pub const FsNodeData = @import("fsnode.zig").FsNodeData;
 
 // error tables

@@ -4,7 +4,8 @@ const std = @import("std");
 const ResourceHandler = os.system.ResourceHandler;
 const ResourceKind = ResourceHandler.Kind;
 
-const FsNodeList = std.ArrayList(*FsNode);
+pub const FsNodeList = std.ArrayList(*FsNode);
+
 pub const FsNode = struct {
     name: []u8,
     parent: *FsNode,
@@ -54,10 +55,13 @@ pub const FsNode = struct {
 };
 
 pub const FsNodeData = union(ResourceKind) {
+    device: void,
+    disk: void,
+
     file: void,
     directory: void,
+    virtual_directory: void,
     symlink: FsNodeSymlink,
-    device: void,
     pipe: FsNodePipe,
 };
 

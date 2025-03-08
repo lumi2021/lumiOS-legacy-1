@@ -1,6 +1,7 @@
 const std = @import("std");
 const os = @import("root").os;
 const pci = os.drivers.pci;
+const fs = os.fs;
 
 const write = os.console_write("aHCI");
 const st = os.stack_tracer;
@@ -16,11 +17,10 @@ pub fn init_device(addr: pci.Addr) void {
     const abar_addr = addr.barinfo(5).phy;
     const abar = os.memory.ptr_from_paddr(*HBARegisters, abar_addr);
 
-    probe_port(abar);
-
+    iterate_though_ports(abar);
 }
 
-fn probe_port(abar: *HBARegisters) void {
+fn iterate_though_ports(abar: *HBARegisters) void {
     st.push(@src()); defer st.pop();
 
     // Search disk in implemented ports
@@ -30,7 +30,12 @@ fn probe_port(abar: *HBARegisters) void {
         if (pi & 1 != 0) {
 
             const dt = check_type(&abar.ports[i]);
-            if (dt == .sata) write.dbg("SATA found on port {}", .{i})
+            if (dt == .sata) {
+                write.dbg("SATA found on port {}", .{i});
+                const driveid = fs.append_drive();
+                fs.ls("");
+                _ = driveid;
+            }
             else if (dt == .satapi) write.dbg("SATAPI found on port {}", .{i})
             else if (dt == .semb) write.dbg("SEMB found on port {}", .{i})
             else if (dt == .pm) write.dbg("PM found on port {}", .{i});
@@ -38,6 +43,12 @@ fn probe_port(abar: *HBARegisters) void {
 
         }
     }
+}
+
+fn port_rebase(abar: *HBARegisters, portno: usize) void {
+    // TODO, not needing this rn
+    _ = abar;
+    _ = portno;
 }
 
 fn check_type(port: *HBAPort) AHCIDevice {
