@@ -10,20 +10,23 @@ const write = os.console_write("taskman");
 const st = os.stack_tracer;
 
 const TaskItem = ?*Task;
-
-pub var task_list: []TaskItem = undefined;
+var task_list: []TaskItem = undefined;
 
 var thead_count: usize = 0;
-pub fn getTheadCount() usize { return thead_count; }
+pub fn getTheadCount() usize {
+    return thead_count;
+}
 
 var allocator: std.mem.Allocator = undefined;
 
 pub fn init() void {
     st.push(@src()); defer st.pop();
 
+    write.log("Initializing task manager...", .{});
+
     allocator = os.memory.allocator;
     task_list = allocator.alloc(TaskItem, 0x200) catch unreachable;
-    for (0..task_list.len) |i| { task_list[i] = null; }
+    @memset(task_list, null);
 }
 
 pub fn run_process(taskName: [:0]u8, entry: ProcessEntryFunction, args: ?*const anyopaque, argssize: usize) !void {
@@ -50,44 +53,55 @@ pub fn run_process(taskName: [:0]u8, entry: ProcessEntryFunction, args: ?*const 
     task.entry_pointer = @intFromPtr(entry);
 
     const tid = get_first_free_tid();
-    task.id = tid;
 
-    // add task to task list
+    write.dbg("{s}", .{if (task_list[tid]) |a| a.name else "null"});
+
+    task.id = tid;
     task_list[tid] = task;
     thead_count += 1;
 
+    write.dbg("{s}", .{if (task_list[tid]) |a| a.name else "null"});
+
     // create task virtual directory
     var buf: [128]u8 = undefined;
-    const procdir = fs.make_dir(std.fmt.bufPrint(&buf, "sys:/proc/{X:0>5}", .{tid}) catch unreachable) catch unreachable;
+    const path = std.fmt.bufPrint(&buf, "sys:/proc/{X:0>5}", .{tid}) catch unreachable;
+    write.dbg("folder for process {} will be created in {s}", .{ tid, path });
+
+    const procdir = fs.make_dir(path) catch unreachable;
     _ = procdir.branch("stdio", .{ .pipe = .{ .pipePtr = task.stdio } });
 }
 
 pub fn kill_process(tid: usize) void {
     st.push(@src()); defer st.pop();
 
-    const curr = getTask(tid) catch return;
+    const curr = getTask(tid) orelse return;
     task_list[tid] = null;
+    thead_count -= 1;
 
     curr.destry();
     curr.taskAllocator.deinit();
 
     write.dbg("Task destroyed", .{});
-
-    thead_count -= 1;
 }
 
-pub inline fn getTask(tid: usize) error{invalidTid}!*Task {
-    const target = task_list[tid];
-    if (target == null) return error.invalidTid;
-    return target.?;
+pub inline fn getTask(tid: usize) TaskItem {
+    return task_list[tid];
 }
+
+pub inline fn activeTaskCount() usize {
+    return thead_count;
+}
+pub inline fn taskList_len() usize {
+    return task_list.len;
+}
+
 pub fn get_first_free_tid() usize {
     st.push(@src()); defer st.pop();
 
-    for (task_list, 1..) |e, i| {
-        if (e == null) return i;
+    for (1..task_list.len) |i| {
+        if (task_list[i] == null) return i;
     }
-    
-    // TODO increase thead list
+
+    // TODO increase thead list length
     unreachable;
 }

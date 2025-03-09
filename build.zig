@@ -73,7 +73,7 @@ pub fn build(b: *Build) void {
 
         // Debug
         "-D", "log.txt",
-        //"-d", "int,cpu_reset",
+        "-d", "int,cpu_reset",
         //"--no-reboot",
         //"--no-shutdown",
         //"-trace", "*xhci*",

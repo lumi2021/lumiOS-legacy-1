@@ -49,7 +49,7 @@ pub fn main(binfo: BootInfo) noreturn {
 
     write.log("# Starting startup programs...", .{});
     os.theading.run_process(@constCast("Process A"), @import("test-processes/process_a.zig").init, null, 0) catch @panic("Cannot initialize process");
-    //os.theading.run_process(@constCast("Process B"), @import("test-processes/process_b.zig").init, null, 0) catch @panic("Cannot initialize process");
+    os.theading.run_process(@constCast("Process B"), @import("test-processes/process_b.zig").init, null, 0) catch @panic("Cannot initialize process");
 
     //os.GL.clear();
     //os.GL.text.drawString("Hello, world from my kernel!", 10, 10);

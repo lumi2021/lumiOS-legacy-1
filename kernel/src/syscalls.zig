@@ -108,7 +108,7 @@ fn syscall_03_close_file_descriptor(_: *TaskContext, handler: usize, _: usize, _
 }
 fn syscall_04_write(_: *TaskContext, handler: usize, buffer: usize, length: usize, pos: usize) SyscallReturn {
         const buf = @as([*]u8, @ptrFromInt(buffer))[0..length];
-    try fs.read_file_descriptor(schedue.current_task.?, handler, buf, pos);
+    try fs.write_file_descriptor(schedue.current_task.?, handler, buf, pos);
 
     return 0;
 }

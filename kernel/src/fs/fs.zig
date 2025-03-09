@@ -41,7 +41,7 @@ pub fn init() !void {
             _ = proc.branch("self", .{ .symlink = .{ .linkTo = "sys:/proc/$THREAD_ID" } });
         }
     }
-    const dev = fileTree.sys.branch("dev:", .{ .virtual_directory = undefined }); {
+    const dev = FsNode.init("dev:", .{ .virtual_directory = undefined }); {
         _ = dev;
     }
 }
@@ -145,16 +145,20 @@ pub fn close_file_descriptor(handler: usize) void {
     current_task.free_resource_index(handler) catch unreachable;
 }
 
-pub fn write_file_descriptor(task: *Task, descriptor: usize, data: []u8, pos: usize) OpenFileError!isize {
+pub fn write_file_descriptor(task: *Task, descriptor: usize, buffer: []u8, pos: usize) OpenFileError!void {
     st.push(@src()); defer st.pop();
 
-    const file = task.resources[descriptor];
-    if (file.in_use == false) return error.invalidDescriptor;
+    const fileHandler = &task.resources[descriptor];
+    if (fileHandler.in_use == false) return error.invalidDescriptor;
+    write.dbg("writing in file \"{s}\"", .{fileHandler.fsnode.name});
 
-    write.log("writing in file \"{s}\"", .{file.path});
+    const bufcopy = allocator.alloc(u8, pos + buffer.len) catch unreachable;
+    @memset(bufcopy, 0);
+    @memcpy(bufcopy[pos..], buffer);
 
-    _ = data;
-    _ = pos;
+    switch (fileHandler.data) {
+        else => write.err("write in {s} not handled", .{@tagName(fileHandler.data)})
+    }
 }
 pub fn read_file_descriptor(task: *Task, descriptor: usize, buffer: []u8, pos: usize) ReadFileError!void {
     st.push(@src()); defer st.pop();
@@ -197,9 +201,12 @@ fn solve_path(path: []const u8) OpenPathError!*FsNode {
                 .symlink => {
                     write.log("branching into symbolic link \"{s}\"", .{c.data.symlink.linkTo});
                     cur = try solve_path(c.data.symlink.linkTo);
-                    if (cur.kind() != .directory) return error.notADirectory;
+                    
+                    if (cur.kind() != .directory and cur.kind() != .virtual_directory)
+                        return error.notADirectory;
                 },
-                .directory => cur = c,
+                .directory ,
+                .virtual_directory => cur = c,
                 
                 else => return c
             }
@@ -216,9 +223,9 @@ fn solve_path(path: []const u8) OpenPathError!*FsNode {
 fn get_tree_root(token: []const u8) OpenPathError!*FsNode {
     st.push(@src()); defer st.pop();
 
-    if (token.len <= 3 or token[token.len - 1] != ':') return error.invalidPath;
+    if (token.len <= 2 or token[token.len - 1] != ':') return error.invalidPath;
 
-    // TODO normal drives
+    if (token.len == 2 and fileTree.drives['A' - token[0]] != null) return fileTree.drives['A' - token[0]].?;
     if (token.len == 4 and std.mem.eql(u8, token, "sys:")) return fileTree.sys
     else if (token.len == 4 and std.mem.eql(u8, token, "dev:")) return fileTree.dev
 

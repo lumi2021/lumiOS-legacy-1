@@ -8,14 +8,14 @@ pub const max_ioapics = 5;
 pub const debug_ignore: []const KeyValuePair = &[_]KeyValuePair{
     // main setup
     .{ .key = "Main", .value = ignore_all },
-    
+
     // memory
     .{ .key = "PMM", .value = ignore_all },
     .{ .key = "VMM", .value = ignore_all },
     .{ .key = "Paging", .value = ignore_all },
 
     // threading
-    .{ .key = "schedue", .value = ignore_all },
+    .{ .key = "schedue", .value = default },
     .{ .key = "taskman", .value = ignore_all },
     .{ .key = "task", .value = ignore_all },
 
@@ -36,8 +36,6 @@ pub const debug_ignore: []const KeyValuePair = &[_]KeyValuePair{
 
     // Allocations
     .{ .key = "Alloc", .value = ignore_all },
-
-    .{ .key = "ProcessA", .value = default },
 
     // Debug
     .{ .key = "Stack Tracer", .value = ignore_all },

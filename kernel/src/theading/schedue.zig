@@ -45,14 +45,16 @@ fn initialize_process(task: *Task) void {
 }
 
 fn select_next_task() void {
-    task_idx += 1;
-    while (task_manager.task_list[task_idx] == null) {
-        if (task_idx + 1 >= task_manager.task_list.len) task_idx = 0
-        else task_idx += 1;
+    if (task_idx + 1 >= task_manager.taskList_len()) task_idx = 0 else task_idx += 1;
+
+    write.dbg("going to task {}..", .{task_idx});
+    while (task_manager.getTask(task_idx) == null) {
+        if (task_idx + 1 >= task_manager.taskList_len()) task_idx = 0 else task_idx += 1;
+        write.dbg("skiping to task {}..", .{task_idx});
     }
 
-    const task = task_manager.task_list[task_idx].?;
-    
+    const task = task_manager.getTask(task_idx).?;
+
     if (task.state == .new) {
         write.log("unitialized task {}. initializing...", .{task.id});
         initialize_process(task);
@@ -73,9 +75,12 @@ pub fn do_schedue(currContext: *TaskContext) void {
     // save current context
     if (current_task) |cTask| {
         write.dbg("Pausing task \"{s}\"...", .{cTask.name});
-        cTask.context = currContext.*;
+
         st.save_task_stack_trace(cTask);
+        cTask.context = currContext.*;
         current_task = null;
+
+        write.dbg("Task \"{s}\" paused.", .{cTask.name});
     } else if (is_first_scheduing) {
         default_context = currContext.*;
         is_first_scheduing = false;
@@ -116,7 +121,7 @@ fn process_handler(funcPtr: usize, argsPtr: usize) callconv(.C) noreturn {
 
 pub fn kill_current_process_noreturn(status_code: isize) noreturn {
     st.push(@src()); defer st.pop();
-    
+
     kill_current_process(status_code);
 
     task_write.dbg("forcing schedue...", .{});

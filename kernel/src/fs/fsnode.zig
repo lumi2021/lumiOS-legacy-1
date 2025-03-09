@@ -4,6 +4,8 @@ const std = @import("std");
 const ResourceHandler = os.system.ResourceHandler;
 const ResourceKind = ResourceHandler.Kind;
 
+const st = os.stack_tracer;
+
 pub const FsNodeList = std.ArrayList(*FsNode);
 
 pub const FsNode = struct {
@@ -18,6 +20,8 @@ pub const FsNode = struct {
     data: FsNodeData,
 
     pub fn init(name: []const u8, data: FsNodeData) *@This() {
+        st.push(@src()); defer st.pop();
+        
         const alloc = os.memory.allocator;
     
         const this = alloc.create(FsNode) catch unreachable;
@@ -41,12 +45,16 @@ pub const FsNode = struct {
     }
 
     pub fn branch(this: *@This(), name: []const u8, data: FsNodeData) *@This() {
+        st.push(@src()); defer st.pop();
+
         const new = FsNode.init(name, data);
         this.children.append(new) catch unreachable;
         return new;
     }
 
     pub fn getChild(this: *@This(), name: []const u8) ?*@This() {
+        st.push(@src()); defer st.pop();
+        
         for (this.children.items) |i| {
             if (std.mem.eql(u8, i.name, name)) return i;
         }
