@@ -157,6 +157,11 @@ pub fn write_file_descriptor(task: *Task, descriptor: usize, buffer: []u8, pos: 
     @memcpy(bufcopy[pos..], buffer);
 
     switch (fileHandler.data) {
+        .pipe => |*p| {
+            const item: [1][]u8 = .{ bufcopy };
+            p.pipePtr.buffer.write(&item) catch unreachable;
+        },
+
         else => write.err("write in {s} not handled", .{@tagName(fileHandler.data)})
     }
 }

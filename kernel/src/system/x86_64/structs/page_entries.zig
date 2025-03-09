@@ -146,7 +146,7 @@ pub const PageTableEntry = packed struct(u64) {
 
 // generates a mask to isolate a field of a packed struct while keeping it shifted relative to its bit offset in the struct.
 // the field's value is effectively left shifted by its bit offset in the struct and bits outside the field are masked out
-fn makeTruncMask(comptime T: type, comptime field: []const u8) @Type(.{ .Int = .{ .signedness = .unsigned, .bits = @bitSizeOf(T) } }) {
+fn makeTruncMask(comptime T: type, comptime field: []const u8) @Type(.{ .@"int" = .{ .signedness = .unsigned, .bits = @bitSizeOf(T) } }) {
     const offset = @bitOffsetOf(T, field);
     const size = @bitSizeOf(@TypeOf(@field(@as(T, undefined), field)));
 

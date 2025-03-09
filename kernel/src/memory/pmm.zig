@@ -181,7 +181,7 @@ pub inline fn vaddr_from_paddr(paddr: usize) usize {
     return paddr +% phys_mapping_base_unsigned;
 }
 pub inline fn ptr_from_paddr(Ptr: type, paddr: usize) Ptr {
-    if (@as(std.builtin.TypeId, @typeInfo(Ptr)) == .Optional and paddr == 0) return null;
+    if (@as(std.builtin.TypeId, @typeInfo(Ptr)) == .optional and paddr == 0) return null;
     return @ptrFromInt(vaddr_from_paddr(paddr));
 }
 

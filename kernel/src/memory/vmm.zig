@@ -52,16 +52,16 @@ pub fn init(memmap: []*MemMapEntry) !void {
 
 const write_allocator = os.console_write("Alloc");
 pub const allocator = struct {
-    vtab: std.mem.Allocator.VTable = .{ .alloc = alloc, .resize = resize, .free = free },
+    vtab: std.mem.Allocator.VTable = .{ .alloc = alloc, .resize = resize, .remap = remap, .free = free },
 
     pub fn get(self: *const @This()) std.mem.Allocator {
         return .{ .ptr = undefined, .vtable = &self.vtab };
     }
 
-    fn alloc(_: *anyopaque, len: usize, ptr_align: u8, _: usize) ?[*]u8 {
+    fn alloc(_: *anyopaque, len: usize, ptr_align: std.mem.Alignment, _: usize) ?[*]u8 {
         st.push(@src()); defer st.pop();
 
-        const alloc_len = pmm.get_allocation_size(@max(@as(usize, 1) << @truncate(ptr_align), len));
+        const alloc_len = pmm.get_allocation_size(@max(@as(usize, 1) << @truncate(ptr_align.toByteUnits()), len));
         write_allocator.dbg("Trying to allocate {} bytes...", .{alloc_len});
 
         const ptr = pmm.ptr_from_paddr([*]u8, pmm.alloc(alloc_len) catch |err| {
@@ -73,10 +73,10 @@ pub const allocator = struct {
         return ptr;
     }
 
-    fn resize(_: *anyopaque, old_mem: []u8, old_align: u8, new_size: usize, ret_addr: usize) bool {
+    fn resize(_: *anyopaque, old_mem: []u8, old_align: std.mem.Alignment, new_size: usize, ret_addr: usize) bool {
         st.push(@src()); defer st.pop();
 
-        const old_alloc = pmm.get_allocation_size(@max(old_mem.len, old_align));
+        const old_alloc = pmm.get_allocation_size(@max(old_mem.len,  old_align.toByteUnits()));
 
         const paddr = pmm.paddr_from_ptr(old_mem.ptr);
 
@@ -85,7 +85,7 @@ pub const allocator = struct {
 
             return true;
         } else {
-            const new_alloc = pmm.get_allocation_size(@max(new_size, old_align));
+            const new_alloc = pmm.get_allocation_size(@max(new_size, old_align.toByteUnits()));
 
             if (new_alloc > old_alloc) return false;
 
@@ -99,10 +99,18 @@ pub const allocator = struct {
         }
     }
 
-    fn free(_: *anyopaque, old_mem: []u8, old_align: u8, _: usize) void {
+    fn remap(_ignored: *anyopaque, old_mem: []u8, old_align: std.mem.Alignment, new_size: usize, ret_addr: usize) ?[*]u8 {
+        if (resize(_ignored, old_mem, old_align, new_size, ret_addr)) return old_mem.ptr;
+        const buf = alloc(_ignored, new_size, old_align, 0).?;
+        @memcpy(buf, old_mem);
+        free(_ignored, old_mem, old_align, ret_addr);
+        return buf;
+    }
+
+    fn free(_: *anyopaque, old_mem: []u8, old_align: std.mem.Alignment, _: usize) void {
         st.push(@src());
 
-        const old_alloc = pmm.get_allocation_size(@max(old_mem.len, old_align));
+        const old_alloc = pmm.get_allocation_size(@max(old_mem.len, old_align.toByteUnits()));
         const paddr = pmm.paddr_from_ptr(old_mem.ptr);
 
         write_allocator.dbg("Trying to free {} bytes in address ${X:0>16}...", .{ old_alloc, paddr });

@@ -1,6 +1,7 @@
 .{
-    .name = "lumiOS",
+    .name = .lumiOS,
     .version = "0.1.0",
+    .fingerprint = 0xf40f8dc81017f79a,
     .paths = .{ "build.zig", "build.zig.zon" },
     .dependencies = .{
 
@@ -9,11 +10,5 @@
         .oslib =  .{ .path = "src/libs/oslib", },
 
         // Applications:
-
-        // Externel deps:
-        .disk_image_step = .{
-            .url = "https://github.com/zig-osdev/disk-image-step/archive/04881824f85e2eac0caf3ddf52c462d3d38a78f6.tar.gz",
-            .hash = "12208fd2f0f3e5db1bf323e86f33e99216d6d790778710ec917f6335005437e2e684",
-        },
     },
 }
