@@ -33,7 +33,6 @@ fn iterate_though_ports(abar: *HBARegisters) void {
             if (dt == .sata) {
                 write.dbg("SATA found on port {}", .{i});
                 const driveid = fs.append_drive();
-                fs.ls("");
                 _ = driveid;
             }
             else if (dt == .satapi) write.dbg("SATAPI found on port {}", .{i})

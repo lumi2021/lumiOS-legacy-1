@@ -106,16 +106,16 @@ pub fn function_scan(addr: Addr) void {
     if (addr.vendor_id().read() == 0xFFFF) return;
 
     switch (addr.base_class().read()) {
-        else => printf(" - Unknown class ({X:2}:{X:2})!\r\n", .{addr.base_class().read(), addr.sub_class().read()}),
+        else => printf(" - Unknown class ({X:0>2}:{X:0>2})!\r\n", .{addr.base_class().read(), addr.sub_class().read()}),
 
         0x00 => {
             switch (addr.sub_class().read()) {
-                else => printf(" - Unknown unclassified device ({X:2}:{X:2})!\r\n", .{addr.base_class().read(), addr.sub_class().read()}),
+                else => printf(" - Unknown unclassified device ({X:0>2}:{X:0>2})!\r\n", .{addr.base_class().read(), addr.sub_class().read()}),
             }
         },
         0x01 => {
             switch (addr.sub_class().read()) {
-                else => printf(" - Unknown storage controller ({X:2}:{X:2})!\r\n", .{addr.base_class().read(), addr.sub_class().read()}),
+                else => printf(" - Unknown storage controller ({X:0>2}:{X:0>2})!\r\n", .{addr.base_class().read(), addr.sub_class().read()}),
                 0x06 => {
                     printf(" - AHCI controller\r\n", .{});
                     os.drivers.disk.register_AHCI_drive(addr);
@@ -132,7 +132,7 @@ pub fn function_scan(addr: Addr) void {
         },
         0x02 => {
             switch (addr.sub_class().read()) {
-                else => printf(" - Unknown network controller ({X:2}:{X:2})!\r\n", .{addr.base_class().read(), addr.sub_class().read()}),
+                else => printf(" - Unknown network controller ({X:0>2}:{X:0>2})!\r\n", .{addr.base_class().read(), addr.sub_class().read()}),
                 0x00 => {
                     if (addr.vendor_id().read() == 0x8086 and addr.device_id().read() == 0x100E) {
                         printf(" - E1000 controller\r\n", .{});
@@ -147,7 +147,7 @@ pub fn function_scan(addr: Addr) void {
             if (addr.vendor_id().read() == 0x1AF4 and addr.device_id().read() == 0x1050) {
                 printf("Virtio display controller\r\n", .{});
             } else switch (addr.sub_class().read()) {
-                else => printf(" - Unknown display controller ({X:2}:{X:2})!\r\n", .{addr.base_class().read(), addr.sub_class().read()}),
+                else => printf(" - Unknown display controller ({X:0>2}:{X:0>2})!\r\n", .{addr.base_class().read(), addr.sub_class().read()}),
                 0x00 => {
                     printf(" - VGA compatible controller\r\n", .{});
                 },
@@ -155,7 +155,7 @@ pub fn function_scan(addr: Addr) void {
         },
         0x04 => {
             switch (addr.sub_class().read()) {
-                else => printf(" - Unknown multimedia controller ({X:2}:{X:2})!\r\n", .{addr.base_class().read(), addr.sub_class().read()}),
+                else => printf(" - Unknown multimedia controller ({X:0>2}:{X:0>2})!\r\n", .{addr.base_class().read(), addr.sub_class().read()}),
                 0x03 => {
                     printf(" - Audio device\r\n", .{});
                 },
@@ -163,7 +163,7 @@ pub fn function_scan(addr: Addr) void {
         },
         0x06 => {
             switch (addr.sub_class().read()) {
-                else => printf(" - Unknown bridge device ({X:2}:{X:2})!\r\n", .{addr.base_class().read(), addr.sub_class().read()}),
+                else => printf(" - Unknown bridge device ({X:0>2}:{X:0>2})!\r\n", .{addr.base_class().read(), addr.sub_class().read()}),
                 0x00 => {
                     printf(" - Host bridge\r\n", .{});
                 },
@@ -184,7 +184,7 @@ pub fn function_scan(addr: Addr) void {
         },
         0x0c => {
             switch (addr.sub_class().read()) {
-                else => printf(" - Unknown serial bus controller ({X:2}:{X:2})!\r\n", .{addr.base_class().read(), addr.sub_class().read()}),
+                else => printf(" - Unknown serial bus controller ({X:0>2}:{X:0>2})!\r\n", .{addr.base_class().read(), addr.sub_class().read()}),
                 0x03 => {
                     switch (addr.prog_if().read()) {
                         else => printf(" - Unknown USB controller\r\n", .{}),

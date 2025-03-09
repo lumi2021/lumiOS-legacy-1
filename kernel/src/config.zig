@@ -15,7 +15,7 @@ pub const debug_ignore: []const KeyValuePair = &[_]KeyValuePair{
     .{ .key = "Paging", .value = ignore_all },
 
     // threading
-    .{ .key = "schedue", .value = default },
+    .{ .key = "schedue", .value = ignore_all },
     .{ .key = "taskman", .value = ignore_all },
     .{ .key = "task", .value = ignore_all },
 

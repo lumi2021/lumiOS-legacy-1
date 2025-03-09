@@ -47,10 +47,8 @@ fn initialize_process(task: *Task) void {
 fn select_next_task() void {
     if (task_idx + 1 >= task_manager.taskList_len()) task_idx = 0 else task_idx += 1;
 
-    write.dbg("going to task {}..", .{task_idx});
     while (task_manager.getTask(task_idx) == null) {
         if (task_idx + 1 >= task_manager.taskList_len()) task_idx = 0 else task_idx += 1;
-        write.dbg("skiping to task {}..", .{task_idx});
     }
 
     const task = task_manager.getTask(task_idx).?;
@@ -70,13 +68,13 @@ pub fn do_schedue(currContext: *TaskContext) void {
     if (task_manager.getTheadCount() == 0) {
         no_task_in_queue(currContext);
         return;
-    } else if (task_manager.getTheadCount() == 1 and current_task != null) return;
+    } //else if (task_manager.getTheadCount() == 1 and current_task != null) return;
 
     // save current context
     if (current_task) |cTask| {
         write.dbg("Pausing task \"{s}\"...", .{cTask.name});
 
-        st.save_task_stack_trace(cTask);
+        //st.save_task_stack_trace(cTask);
         cTask.context = currContext.*;
         current_task = null;
 
