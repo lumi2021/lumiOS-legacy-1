@@ -41,8 +41,8 @@ pub fn init() !void {
             _ = proc.branch("self", .{ .symlink = .{ .linkTo = "sys:/proc/$THREAD_ID" } });
         }
     }
-    const dev = FsNode.init("dev:", .{ .virtual_directory = undefined }); {
-        _ = dev;
+    fileTree.dev = FsNode.init("dev:", .{ .virtual_directory = undefined }); {
+        
     }
 }
 
@@ -62,6 +62,22 @@ pub fn lsnode(node: *FsNode) void {
     for (node.children.items) |e| {
         write.raw("{s: <15}{s}\n", .{e.name, @tagName(e.kind())});
     }
+}
+pub fn lsrecursive() void {
+    for (fileTree.drives) |d| lsRecursiveWithLevel(d, 0);
+    lsRecursiveWithLevel(fileTree.sys, 0);
+    lsRecursiveWithLevel(fileTree.dev, 0);
+}
+fn lsRecursiveWithLevel(node: ?*FsNode, level: usize) void {
+    if (node == null) return;
+
+    for (0..level) |_| write.raw("  ", .{});
+    if (node.?.kind() == .directory or node.?.kind() == .virtual_directory)
+        write.raw("{s}/\r\n", .{node.?.name})
+    else
+        write.raw("{s}\r\n", .{node.?.name});
+
+    for (node.?.children.items) |e| lsRecursiveWithLevel(e, level + 1);
 }
 
 // Drives related

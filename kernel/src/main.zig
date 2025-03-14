@@ -54,6 +54,8 @@ pub fn main(binfo: BootInfo) noreturn {
     //os.GL.clear();
     //os.GL.text.drawString("Hello, world from my kernel!", 10, 10);
 
+    os.fs.lsrecursive();
+
     write.log("# Starting schedue...", .{});
     setup_pic();
     setup_timer();
