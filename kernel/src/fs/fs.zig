@@ -53,7 +53,6 @@ pub fn ls(path: []const u8) void {
         write.raw("dev:           virtual_directory\n", .{});
         return;
     }
-
     lsnode(solve_path(path) catch |err| {
         write.err("error: {s}", .{@errorName(err)});
         return;
@@ -65,7 +64,8 @@ pub fn lsnode(node: *FsNode) void {
     }
 }
 
-pub fn append_drive() usize {
+// Drives related
+pub inline fn get_free_drive_slot() u8 {
     const drive_idx = brk: {
         for (0 .. fileTree.drives.len) |i| {
             if (fileTree.drives[i] == null) break :brk i;
@@ -74,10 +74,12 @@ pub fn append_drive() usize {
         @panic("WTF who have more than 16 disks in a fucking computer????");
     };
 
-    const drive_name: [2]u8 = .{('A' + @as(u8, @intCast(drive_idx))), ':'};
-    fileTree.drives[drive_idx] = FsNode.init(&drive_name, .{ .disk = undefined });
-
-    return drive_idx;
+    return @intCast(drive_idx);
+}
+pub fn append_ahci_drive(disk_entry: *disk.DiskEntry) void {
+    if (fileTree.drives[disk_entry.index] != null) @panic("disk slot already ocupped!");
+    const drive_name: [2]u8 = .{('A' + @as(u8, @intCast(disk_entry.index))), ':'};
+    fileTree.drives[disk_entry.index] = FsNode.init(&drive_name, .{ .disk = disk_entry });
 }
 
 pub fn make_dir(path: []const u8) (OpenPathError || CreateError)!*FsNode {
@@ -218,7 +220,6 @@ fn solve_path(path: []const u8) OpenPathError!*FsNode {
         }
         else {
             write.warn("searching for: {s}", .{step});
-            lsnode(cur);
             return error.pathNotFound;
         }
     }
@@ -248,6 +249,7 @@ const ResourceHandler = os.system.ResourceHandler;
 const FAT = @import("formats/FAT.zig");
 
 const disk = os.drivers.disk;
+const  ahci = disk.ahci;
 
 const write = os.console_write("fs");
 const st = os.stack_tracer;

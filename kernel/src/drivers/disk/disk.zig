@@ -11,8 +11,8 @@ pub const ahci = @import("ahci.zig");
 const write = os.console_write("Disk");
 const st = os.stack_tracer;
 
-const DiskList = std.ArrayList(Disk);
-var disk_list: DiskList = undefined;
+const DiskList = std.ArrayList(*DiskEntry);
+pub var disk_list: DiskList = undefined;
 
 pub fn init() void {
     disk_list = DiskList.init(os.memory.allocator);
@@ -20,13 +20,26 @@ pub fn init() void {
 
 pub const register_AHCI_drive = ahci.init_device;
 
-const Disk = struct {
-    type: DiskType,
-    name: [16]u8
+pub fn read(disk: *DiskEntry, addr: u64, buffer: []u8) void {
+    switch (disk.data) {
+        .sata, .semb, .pm, .satapi => |*d| ahci.read(d, addr, buffer)
+    }
+}
+
+pub const DiskEntry = struct {
+    index: u8,
+    data: DiskData
+};
+const DiskData = union(DiskType) {
+    sata: ahci.AHCIDeviceEntry,
+    semb: ahci.AHCIDeviceEntry,
+    pm: ahci.AHCIDeviceEntry,
+    satapi: ahci.AHCIDeviceEntry
 };
 
-const DiskType = enum {
-    SATA,
-    IDE,
-    ATAPI
+pub const DiskType = enum {
+    sata,
+    semb,
+    pm,
+    satapi
 };

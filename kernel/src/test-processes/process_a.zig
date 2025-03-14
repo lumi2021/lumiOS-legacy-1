@@ -9,7 +9,6 @@ pub fn init(_: ?*anyopaque) callconv(.C) isize {
     osstd.debug.print("Hello world from process A!\n", .{});
 
     const stdio_path = std.fmt.allocPrintZ(mem.allocator, "sys:/proc/self/stdio", .{}) catch unreachable;
-    
     const stdio = osstd.fs.openFileAbsolute(stdio_path, .{ .read = true, .write = true })
        catch |err| { @panic(@errorName(err)); };
 

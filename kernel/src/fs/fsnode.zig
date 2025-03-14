@@ -1,6 +1,8 @@
 const os = @import("root").os;
 const std = @import("std");
 
+const disk = os.drivers.disk;
+
 const ResourceHandler = os.system.ResourceHandler;
 const ResourceKind = ResourceHandler.Kind;
 
@@ -64,7 +66,7 @@ pub const FsNode = struct {
 
 pub const FsNodeData = union(ResourceKind) {
     device: void,
-    disk: void,
+    disk: *disk.DiskEntry,
 
     file: void,
     directory: void,

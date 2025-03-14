@@ -1,7 +1,9 @@
 const std = @import("std");
 const os = @import("root").os;
+const disk = os.drivers.disk;
 const pci = os.drivers.pci;
 const fs = os.fs;
+const mem = os.memory;
 
 const write = os.console_write("aHCI");
 const st = os.stack_tracer;
@@ -20,6 +22,22 @@ pub fn init_device(addr: pci.Addr) void {
     iterate_though_ports(abar);
 }
 
+pub fn read(device: *AHCIDeviceEntry, addr: u64, buffer: []u8) !void {
+    st.push(@src()); defer st.pop();
+
+    device.port.is = -1;
+    const spin: u32 = 0; // Spin lock timeout counter
+    const slot: u32 = find_cmdslot(device);
+    if (slot == -1) return error.NoCmdSlot;
+    
+    const cmdheader: *HBACMDHeder = @intFromPtr(device.port.clb + @sizeOf(HBACMDHeder) * slot);
+
+    _ = addr;
+    _ = buffer;
+    _ = spin;
+    _ = cmdheader;
+}
+
 fn iterate_though_ports(abar: *HBARegisters) void {
     st.push(@src()); defer st.pop();
 
@@ -30,10 +48,23 @@ fn iterate_though_ports(abar: *HBARegisters) void {
         if (pi & 1 != 0) {
 
             const dt = check_type(&abar.ports[i]);
+
             if (dt == .sata) {
                 write.dbg("SATA found on port {}", .{i});
-                const driveid = fs.append_drive();
-                _ = driveid;
+
+                const driveid = fs.get_free_drive_slot();
+                
+                const newDiskEntry: *disk.DiskEntry = mem.allocator.create(disk.DiskEntry) catch unreachable;
+                newDiskEntry.* = .{
+                    .index = driveid,
+                    .data = .{ .sata = .{
+                        .registers = abar,
+                        .port = &abar.ports[i]
+                    }}
+                };
+                
+                fs.append_ahci_drive(newDiskEntry);
+                disk.disk_list.append(newDiskEntry) catch unreachable;
             }
             else if (dt == .satapi) write.dbg("SATAPI found on port {}", .{i})
             else if (dt == .semb) write.dbg("SEMB found on port {}", .{i})
@@ -66,6 +97,20 @@ fn check_type(port: *HBAPort) AHCIDevice {
         0x96690101 => .pm,
         else => .sata
     };
+}
+
+// Find a free command list slot
+fn find_cmdslot(device: AHCIDeviceEntry) u32 {
+    st.push(@src()); defer st.pop();
+
+    // If not set in SACT and CI, the slot is free
+    var slots: u32 = (device.port.sact | device.port.ci);
+    const cmdslots = (device.registers.cap & 0x1F) + 1;
+    for (0..cmdslots) |i| {
+        if ((slots & 1) == 0) return i;
+        slots >>= 1;
+    }
+    return -1;
 }
 
 inline fn start_cmd(port: *HBAPort) void {
@@ -104,7 +149,7 @@ pub const HBARegisters = extern struct {
     ports: [32]HBAPort,
 };
 
-const HBAPort = extern struct {
+pub const HBAPort = extern struct {
     clb: u32, clbu: u32,
     fb: u32, fbu: u32,
     is: u32,
@@ -124,10 +169,41 @@ const HBAPort = extern struct {
     vendor: [4]u32,
 };
 
-const AHCIDevice = enum {
+const HBACMDHeder = packed struct {
+    // DW0
+    cfl: u5,  // Command FIS length in DWORDS, 2 ~ 16
+    a: u1,    // ATAPI
+    w: u1,    // Write, 1: H2D, 0: D2H
+    p: u1,    // Prefetchable
+
+    r: u1,    // Reset
+    b: u1,    // BIST
+    c: u1,    // Clear busy upon R_OK
+    rsv0: u1, // Reserved
+    pmp: u4,  // Port multiplier port
+
+    prdtl: u16, // Physical region descriptor table length in entries
+
+    // DW1
+    prdbc: u32, // Physical region descriptor byte count transferred
+
+    // DW2, DW3
+    ctba: u32,  // Command table descriptor base address
+    ctbau: u32, // Command table descriptor base address upper 32 bits
+
+    // DW4 - DW7
+    _rsv1: u128, // Reserved
+};
+
+pub const AHCIDevice = enum {
     _null,
     sata,
     semb,
     pm,
     satapi
+};
+
+pub const AHCIDeviceEntry = struct {
+    registers: *HBARegisters,
+    port: *HBAPort
 };
