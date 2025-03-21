@@ -22,7 +22,7 @@ pub const register_AHCI_drive = ahci.init_device;
 
 pub fn read(disk: *DiskEntry, addr: u64, buffer: []u8) void {
     switch (disk.data) {
-        .sata, .semb, .pm, .satapi => |*d| ahci.read(d, addr, buffer)
+        .sata, .semb, .pm, .satapi => |*d| ahci.read(d, addr, buffer) catch undefined
     }
 }
 

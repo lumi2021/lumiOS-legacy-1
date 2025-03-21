@@ -22,20 +22,44 @@ pub fn init_device(addr: pci.Addr) void {
     iterate_though_ports(abar);
 }
 
-pub fn read(device: *AHCIDeviceEntry, addr: u64, buffer: []u8) !void {
+pub fn read(device: *AHCIDeviceEntry, sector: u64, buffer: []u8) !void {
     st.push(@src()); defer st.pop();
 
-    device.port.is = -1;
-    const spin: u32 = 0; // Spin lock timeout counter
-    const slot: u32 = find_cmdslot(device);
-    if (slot == -1) return error.NoCmdSlot;
-    
-    const cmdheader: *HBACMDHeder = @intFromPtr(device.port.clb + @sizeOf(HBACMDHeder) * slot);
+    write.warn("lets just ignore this for now", .{});
+    if (true) return;
 
-    _ = addr;
-    _ = buffer;
+    const sector_low: u32 = @intCast(sector & 0xFFFF_FFFF);
+    const sector_high: u32 = @intCast((sector >> 32) & 0xFFFF_FFFF);
+
+    const port = device.port;
+
+    port.interrupt_status = -1;
+    const spin: u32 = 0;
+    const slot = find_cmdslot(device);
+
+    if (slot == -1) {
+        write.err("No free command slots!", .{});
+        return;
+    }
+
+    const command_header_ptr: [*]HBACommandHeder = @ptrFromInt(@as(usize, @intCast(port.command_list_low))
+        | (@as(usize, @intCast(port.command_list_high)) << 32));
+    write.warn("command_header ptr: {X:0>16} ({X:0>8}:{X:0>8})", .{@intFromPtr(command_header_ptr), port.command_list_low, port.command_list_high});
+    const command_header = &command_header_ptr[@intCast(slot)..][0];
+
+    command_header.command_fis_length = @sizeOf(HBACommandFis) / @sizeOf(u32);
+    command_header.write = false;
+    command_header.prdt_length = @intCast(((buffer.len - 1) >> 4) + 1);
+
+    const command_table: *HBACommandTable = @ptrFromInt(@as(usize, @intCast(command_header.command_table_base_address_low))
+        | (@as(usize, @intCast(command_header.command_table_base_address_high)) << 32));
+    write.warn("command_table ptr: {X}", .{@intFromPtr(command_table)});
+    command_table.* = std.mem.zeroes(HBACommandTable);
+
+    _ = sector_low;
+    _ = sector_high;
     _ = spin;
-    _ = cmdheader;
+
 }
 
 fn iterate_though_ports(abar: *HBARegisters) void {
@@ -65,6 +89,8 @@ fn iterate_though_ports(abar: *HBARegisters) void {
                 
                 fs.append_ahci_drive(newDiskEntry);
                 disk.disk_list.append(newDiskEntry) catch unreachable;
+
+                fs.reset_drive(driveid);
             }
             else if (dt == .satapi) write.dbg("SATAPI found on port {}", .{i})
             else if (dt == .semb) write.dbg("SEMB found on port {}", .{i})
@@ -84,14 +110,14 @@ fn port_rebase(abar: *HBARegisters, portno: usize) void {
 fn check_type(port: *HBAPort) AHCIDevice {
     st.push(@src()); defer st.pop();
 
-    const ssts = port.ssts;
+    const ssts = port.sata_status;
     const ipm = (ssts >> 8) & 0x0F;
     const det = ssts & 0x0F;
 
     if (det != 3) return ._null;
     if (ipm != 1) return ._null;
 
-    return switch (port.sig) {
+    return switch (port.signature) {
         0xEB140101 => .satapi,
         0xC33C0101 => .semb,
         0x96690101 => .pm,
@@ -100,14 +126,14 @@ fn check_type(port: *HBAPort) AHCIDevice {
 }
 
 // Find a free command list slot
-fn find_cmdslot(device: AHCIDeviceEntry) u32 {
+fn find_cmdslot(device: *AHCIDeviceEntry) i32 {
     st.push(@src()); defer st.pop();
 
     // If not set in SACT and CI, the slot is free
-    var slots: u32 = (device.port.sact | device.port.ci);
+    var slots: u32 = (device.port.sata_active | device.port.command_issue);
     const cmdslots = (device.registers.cap & 0x1F) + 1;
     for (0..cmdslots) |i| {
-        if ((slots & 1) == 0) return i;
+        if ((slots & 1) == 0) return @intCast(i);
         slots >>= 1;
     }
     return -1;
@@ -131,6 +157,7 @@ inline fn stop_cmd(port: *HBAPort) void {
     while ((port.cmd & HBA_PxCMD_FR) == 0 or (port.cmd & HBA_PxCMD_CR) == 0) {}
 }
 
+
 pub const HBARegisters = extern struct {
     cap: u32,
     ghc: u32,
@@ -148,51 +175,76 @@ pub const HBARegisters = extern struct {
 
     ports: [32]HBAPort,
 };
-
 pub const HBAPort = extern struct {
-    clb: u32, clbu: u32,
-    fb: u32, fbu: u32,
-    is: u32,
-    ie: u32,
-    cmd: u32,
+    command_list_low: u32, command_list_high: u32,
+    fis_base_low: u32, fis_base_high: u32,
+    interrupt_status: i32,
+    interrupt_enable: u32,
+    command_status: u32,
     _reserved_0: u32,
-    tfd: u32,
-    sig: u32,
-    ssts: u32,
-    sctl: u32,
-    serr: u32,
-    sact: u32,
-    ci: u32,
-    sntf: u32,
-    fbs: u32,
+    task_file_data: u32,
+    signature: u32,
+    sata_status: u32,
+    sata_control: u32,
+    sata_error: u32,
+    sata_active: u32,
+    command_issue: u32,
+    sata_notification: u32,
+    fbfis_based_switching_controll: u32,
     _reserved_1: [11]u32,
     vendor: [4]u32,
 };
 
-const HBACMDHeder = packed struct {
-    // DW0
-    cfl: u5,  // Command FIS length in DWORDS, 2 ~ 16
-    a: u1,    // ATAPI
-    w: u1,    // Write, 1: H2D, 0: D2H
-    p: u1,    // Prefetchable
+const HBACommandHeder = packed struct {
+   command_fis_length: u8,
+   atapi: bool,
+   write: bool,
+   prefetchable: bool,
 
-    r: u1,    // Reset
-    b: u1,    // BIST
-    c: u1,    // Clear busy upon R_OK
-    rsv0: u1, // Reserved
-    pmp: u4,  // Port multiplier port
+   reset: bool,
+   bist: bool,
+   clear_busy_on_ok: bool,
+   _reserved_0: u1,
+   port_multiplier: u4,
 
-    prdtl: u16, // Physical region descriptor table length in entries
+   prdt_length: u16,
+   prdb_count: u32,
+   command_table_base_address_low: u32,
+   command_table_base_address_high: u32,
 
-    // DW1
-    prdbc: u32, // Physical region descriptor byte count transferred
+   _reserved_1: u128
+};
+const HBACommandFis = packed struct {
+    fis_type: u8,
+    pm_port: u4,
+    _reserved_0: u3,
+    command_control: u1,
 
-    // DW2, DW3
-    ctba: u32,  // Command table descriptor base address
-    ctbau: u32, // Command table descriptor base address upper 32 bits
+    command: u8,
+    feature_low: u8,
 
-    // DW4 - DW7
-    _rsv1: u128, // Reserved
+    lba0: u8,
+    lba1: u8,
+    lba2: u8,
+    device_register: u8,
+
+    lba3: u8,
+    lba4: u8,
+    lba5: u8,
+    feature_high: u8,
+
+    count_low: u8,
+    count_high: u8,
+    icc: u8,
+    control: u8,
+
+    _reserved_1: u32,
+};
+const HBACommandTable = extern struct {
+    command_fis: [64]u8,
+    atapi_command: [16]u8,
+    _reserved_0: [48]u8,
+    prdt_entry: [32]u8
 };
 
 pub const AHCIDevice = enum {
@@ -207,3 +259,4 @@ pub const AHCIDeviceEntry = struct {
     registers: *HBARegisters,
     port: *HBAPort
 };
+

@@ -97,6 +97,20 @@ pub fn append_ahci_drive(disk_entry: *disk.DiskEntry) void {
     const drive_name: [2]u8 = .{('A' + @as(u8, @intCast(disk_entry.index))), ':'};
     fileTree.drives[disk_entry.index] = FsNode.init(&drive_name, .{ .disk = disk_entry });
 }
+pub fn reset_drive(slot: u8) void {
+    st.push(@src()); defer st.pop();
+    
+    const drive = fileTree.drives[slot] orelse return;
+    if (drive.data != .disk) return;
+
+    write.dbg("reseting drive {c} data...", .{'A' + slot});
+
+    var buffer: [512]u8 = undefined;
+
+    disk.read(drive.data.disk, 0, &buffer);
+
+    write.dbg("driver {c} reseted!", .{'A' + slot});
+}
 
 pub fn make_dir(path: []const u8) (OpenPathError || CreateError)!*FsNode {
     st.push(@src()); defer st.pop();
