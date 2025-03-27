@@ -48,6 +48,8 @@ pub fn main(binfo: BootInfo) noreturn {
     os.drivers.init_all_drivers() catch |err| @panic(@errorName(err));
 
     write.log("# Starting startup programs...", .{});
+    os.theading.run_process(@constCast("Adam"), @import("sysprocs/adam.zig").init, null, 0) catch @panic("Cannot initialize process");
+
     os.theading.run_process(@constCast("Process A"), @import("test-processes/process_a.zig").init, null, 0) catch @panic("Cannot initialize process");
     os.theading.run_process(@constCast("Process B"), @import("test-processes/process_b.zig").init, null, 0) catch @panic("Cannot initialize process");
 
