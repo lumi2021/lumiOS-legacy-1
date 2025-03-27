@@ -103,7 +103,8 @@ pub fn handle_page_fault(frame: *InterruptFrame) void {
     write.err("Page Fault trying to acess ${X:0>16}!", .{addr});
     write.log("\r\n{}", .{frame});
 
-    try_kill_process(frame);
+    @panic("fuck");
+    //try_kill_process(frame);
 }
 
 fn handle_double_fault(frame: *InterruptFrame) void {
