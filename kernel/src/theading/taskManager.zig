@@ -29,7 +29,7 @@ pub fn init() void {
     @memset(task_list, null);
 }
 
-pub fn run_process(taskName: [:0]u8, entry: ProcessEntryFunction, args: ?*const anyopaque, argssize: usize) !void {
+pub fn run_process(taskName: [:0]u8, entry: ProcessEntryFunction, args: ?*const anyopaque, argssize: usize) !usize {
     st.push(@src()); defer st.pop();
 
     write.dbg("Scheduing task \"{s}\" to be initialized...", .{taskName});
@@ -69,6 +69,8 @@ pub fn run_process(taskName: [:0]u8, entry: ProcessEntryFunction, args: ?*const 
 
     const procdir = fs.make_dir(path) catch unreachable;
     _ = procdir.branch("stdio", .{ .pipe = .{ .pipePtr = task.stdio } });
+
+    return tid;
 }
 
 pub fn kill_process(tid: usize) void {

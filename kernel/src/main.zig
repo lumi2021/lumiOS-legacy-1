@@ -50,7 +50,7 @@ pub fn main(binfo: BootInfo) noreturn {
     os.drivers.init_all_drivers() catch |err| @panic(@errorName(err));
 
     write.log("# Starting startup programs...", .{});
-    os.theading.run_process(
+    _ = os.theading.run_process(
         @constCast("Adam"),
         sysprocs.adam.init,
         null, 0

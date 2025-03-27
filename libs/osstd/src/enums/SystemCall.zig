@@ -8,5 +8,6 @@ pub const SystemCall = enum(usize) {
     write = 4,
     read = 5,
     
+    branch_subprocess = 6,
     _
 };
