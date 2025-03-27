@@ -42,7 +42,8 @@ pub fn init() !void {
         }
     }
     fileTree.dev = FsNode.init("dev:", .{ .virtual_directory = undefined }); {
-        
+        _ = fileTree.dev.branch("keyboard", .{ .pipe = undefined });
+        _ = fileTree.dev.branch("mouse", .{ .pipe = undefined });
     }
 }
 
