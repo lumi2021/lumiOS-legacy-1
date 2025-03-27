@@ -73,6 +73,7 @@ pub const FsNodeData = union(ResourceKind) {
     virtual_directory: void,
     symlink: FsNodeSymlink,
     pipe: FsNodePipe,
+    sharedPipe: FsNodePipe,
 };
 
 pub const FsNodePipe = struct {
