@@ -20,20 +20,6 @@ pub fn main(binfo: BootInfo) noreturn {
     boot_info = binfo;
 
     os.uart.uart_initialize();
-    {
-        os.GL.init(binfo.framebuffer);
-        os.GL.clear();
-
-        //const centerX = (os.GL.canvasWidth / 2 - (36 * 7) / 2);
-        //const centerY = (os.GL.canvasHeight / 2 - 80 / 2);
-        //const centerX2 = (os.GL.canvasWidth / 2 - (8 * 7) / 2);
-        //const centerY2 = (os.GL.canvasHeight / 2 - 16 / 2);
-
-        //os.GL.text.drawBigString("LUMI OS", centerX, centerY);
-        //os.GL.text.drawString(" 0.1.0 ", centerX2, centerY2 + 40);
-
-        
-    }
     write.raw("Hello, World from {s}!\n", .{@tagName(os.system.arch)});
 
     write.log("# Starting setup routine...", .{});
@@ -49,12 +35,34 @@ pub fn main(binfo: BootInfo) noreturn {
     write.log("# Starting drivers...", .{});
     os.drivers.init_all_drivers() catch |err| @panic(@errorName(err));
 
-    write.log("# Starting startup programs...", .{});
-    _ = os.theading.run_process(
-        @constCast("Adam"),
-        sysprocs.adam.init,
-        null, 0
-    ) catch @panic("Cannot initialize Adam");
+    write.log("# Starting Video...", .{});
+    {
+        os.gl.init(binfo.framebuffer);
+
+        for (0 .. os.gl.canvasWidth) |x| {
+            for (0 .. os.gl.canvasHeight) |y| {
+                os.gl.frameBuffer[x + y * os.gl.canvasPPS] = .rgb(x, y, x + y);
+            }
+        }
+
+        //const centerX = (os.GL.canvasWidth / 2 - (36 * 7) / 2);
+        //const centerY = (os.GL.canvasHeight / 2 - 80 / 2);
+        //const centerX2 = (os.GL.canvasWidth / 2 - (8 * 7) / 2);
+        //const centerY2 = (os.GL.canvasHeight / 2 - 16 / 2);
+
+        //os.GL.text.drawBigString("LUMI OS", centerX, centerY);
+        //os.GL.text.drawString(" 0.1.0 ", centerX2, centerY2 + 40);
+
+    }
+
+    write.log("# Starting initialization programs...", .{});
+    {
+        _ = os.theading.run_process(
+            @constCast("Adam"),
+            sysprocs.adam.init,
+            null, 0
+        ) catch @panic("Cannot initialize Adam");
+    }
 
     os.fs.lsrecursive();
 

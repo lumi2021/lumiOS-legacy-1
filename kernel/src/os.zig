@@ -1,10 +1,10 @@
-pub const uart = @import("IO/uart.zig");
-pub const port_io = @import("IO/port_io.zig");
+pub const uart = @import("io/uart.zig");
+pub const port_io = @import("io/port_io.zig");
 pub const console_write = @import("debug/log.zig").write;
 
 pub const boot_info = @import("boot/boot_info.zig");
 
-pub const GL = @import("GL/GL.zig");
+pub const gl = @import("gl/gl.zig");
 
 pub const system = @import("system/system.zig");
 pub const theading = @import("theading/theading.zig");

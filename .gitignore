@@ -1,5 +1,9 @@
 /.vscode
 /**/.zig-cache
 /**/zig-out
-log.txt
+
 *.iso
+
+# debug things
+log.txt
+serial.txt

@@ -60,8 +60,8 @@ pub fn build(b: *Build) void {
         "-m", "512M",
 
         // serial, video, etc
-        "-serial", "mon:stdio",
-        "-monitor", "vc",
+        "-serial", "file:serial.txt",
+        "-monitor", "mon:stdio",
         "-display", "gtk,zoom-to-fit=on",
 
         // Aditional devices
