@@ -17,7 +17,7 @@ pub fn init(_: ?*anyopaque) callconv(.C) isize {
     _ = osstd.process.create_thead("winman", sysprocs.winman.init, null);
 
     osstd.debug.print("Initializing Adam window...\n", .{});
-    win = gl.create_window(100, 80);
+    win = gl.create_window(.text, 40, 20);
 
     while (true) { }
 }

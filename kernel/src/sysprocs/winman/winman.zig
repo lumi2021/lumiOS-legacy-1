@@ -14,22 +14,18 @@ pub fn init(_: ?*anyopaque) callconv(.C) isize {
 fn update_screen() void {
     const winlist = gl.window_list;
 
-    for (0 .. winlist.len) |i| if (winlist[i]) |win| {
+    for (1 .. winlist.len) |i| if (winlist[i]) |win| {
         
-        const posx = @divFloor(gl.canvasCharWidth, 2) - @divFloor(win.width, 2);
-        const posy = @divFloor(gl.canvasCharHeight, 2) - @divFloor(win.height, 2);
+        const posx = @divFloor(gl.canvasCharWidth, 2) - @divFloor(win.charWidth, 2);
+        const posy = @divFloor(gl.canvasCharHeight, 2) - @divFloor(win.charHeight, 2);
 
-        for (0..win.width) |offset| {
-            draw_char(posx + offset, posy);
-            draw_char(posx + offset, posy + win.height);
-        }
-        for (0..(win.height+1)) |offset| {
-            draw_char(posx, posy + offset);
-            draw_char(posx + win.width, posy + offset);
-        }
+        gl.swap_buffer(0);
+        gl.redraw_screen_region(
+            posx,
+            posy,
+            posx + win.charWidth + 1,
+            posy + win.charHeight + 1
+        );
+
     };
-}
-
-inline fn draw_char(px: usize, py: usize) void {
-    gl.draw_char(0, 'a', px, py);
 }

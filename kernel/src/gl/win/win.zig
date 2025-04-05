@@ -6,8 +6,13 @@ pub const Char = gl.Char;
 pub const VideoMode = gl.VideoMode;
 
 pub const Win = struct {
-    width: usize,
-    height: usize,
+    position_x: usize,
+    position_y: usize,
+
+    charWidth: usize,
+    charHeight: usize,
+    pixelWidth: usize,
+    pixelHeight: usize,
 
     mode: VideoMode,
 

@@ -1,4 +1,5 @@
 pub var root_framebuffer: []Pixel = undefined;
+pub var win_zindex: []u8 = undefined;
 
 pub var canvasBPP: u8 = 0;
 pub var canvasPPS: usize = 0;
@@ -41,6 +42,8 @@ pub fn init(fb: bootInfo.FrameBuffer) void {
 
     window_list = allocator.alloc(?*Win, 256) catch unreachable;
     @memset(window_list, null);
+    win_zindex = allocator.alloc(u8, canvasPixelWidth * canvasPixelHeight) catch unreachable;
+    @memset(win_zindex, 0);
 
     write.log(\\
     \\fb size: {}
@@ -58,7 +61,7 @@ pub fn init(fb: bootInfo.FrameBuffer) void {
         canvasPixelHeight, canvasCharHeight
     });
 
-    _ = create_window(canvasCharWidth, canvasCharHeight);
+    _ = create_window(.graph, canvasCharWidth, canvasCharHeight);
 
     ready = true;
 }
@@ -69,7 +72,7 @@ pub inline fn get_system_font() Font {
 
 
 // user side
-pub fn create_window(width: usize, height: usize) usize {
+pub fn create_window(mode: VideoMode, width: usize, height: usize) usize {
     st.push(@src()); defer st.pop();
 
     const free_window_index: usize = b: { 
@@ -82,40 +85,110 @@ pub fn create_window(width: usize, height: usize) usize {
     var nw = allocator.create(Win) catch unreachable;
     window_list[free_window_index] = nw;
 
-    nw.width = width;
-    nw.height = height;
+    const posx = @divFloor(canvasCharWidth, 2) - @divFloor(width, 2);
+    const posy = @divFloor(canvasCharHeight, 2) - @divFloor(height, 2);
 
-    nw.mode = .text;
+    nw.position_x = posx;
+    nw.position_y = posy;
 
-    nw.buffer_0.char = (allocator.alloc(Char, nw.width * nw.height) catch unreachable).ptr;
-    nw.buffer_1.char = (allocator.alloc(Char, nw.width * nw.height) catch unreachable).ptr;
+    nw.charWidth = width;
+    nw.charHeight = height;
 
+    nw.pixelWidth = width * system_font.width * system_font.scale;
+    nw.pixelHeight = height * system_font.height * system_font.scale;
+
+    nw.mode = mode;
+    if (mode == .text) {
+        nw.buffer_0.char = (allocator.alloc(Char, nw.charWidth * nw.charHeight) catch unreachable).ptr;
+        nw.buffer_1.char = (allocator.alloc(Char, nw.charWidth * nw.charHeight) catch unreachable).ptr;
+        @memset(nw.buffer_0.char[0..(nw.charWidth * nw.charHeight)], Char{
+            .color = .{ .byte = 0b0000_0001 },
+            .value = ' '});
+        @memset(nw.buffer_1.char[0..(nw.charWidth * nw.charHeight)], Char{
+            .color = .{ .byte = 0b0000_0001 },
+            .value = ' '});
+    } else {
+        nw.buffer_0.pixel = (allocator.alloc(Pixel, nw.pixelWidth * nw.pixelHeight) catch unreachable).ptr;
+        nw.buffer_1.pixel = (allocator.alloc(Pixel, nw.pixelWidth * nw.pixelHeight) catch unreachable).ptr;
+        @memset(nw.buffer_0.pixel[0..(nw.pixelWidth * nw.pixelHeight)], .rgb(0, 0, 0));
+        @memset(nw.buffer_1.pixel[0..(nw.pixelWidth * nw.pixelHeight)], .rgb(0, 0, 0));
+    }
+
+    focus_window(free_window_index);
     return free_window_index;
 }
 
-pub fn draw_char(ctx: usize, c: u8, posX: usize, posY: usize) void {
+pub fn get_buffer_info(ctx: usize) struct {buf: Framebuffer, width: usize, height: usize} {
     const window = window_list[ctx] orelse @panic("Invalid context descriptor");
-    var fb = if (!window.swap) window.buffer_1.char else window.buffer_0.char;
-
-    if (posX <= 0 or posX > window.width
-    or posY <= 0 or posY > window.height) return;
-
-    const rposx = posX * 16;
-    const rposy = posY * 16;
-
-    for (0 .. (system_font.width)) |x|
-    for (0 .. (system_font.height)) |y| {
-
-        fb[(rposx + x) + (rposy + y) * canvasBPP].value = c;
-        fb[(rposx + x + 1) + (rposy + y) * canvasBPP].value = c;
-        fb[(rposx + x) + (rposy + y + 1) * canvasBPP].value = c;
-        fb[(rposx + x + 1) + (rposy + y + 1) * canvasBPP].value = c;
-
+    const fb = if (!window.swap) window.buffer_0 else window.buffer_1;
+    return .{
+        .buf = fb,
+        .width = if (window.mode == .text) window.charWidth else window.pixelWidth,
+        .height = if (window.mode == .text) window.charHeight else window.pixelHeight
     };
+}
+
+pub fn swap_buffer(ctx: usize) void {
+    if (window_list[ctx]) |win| win.swap = !win.swap;
 }
 // --------
 
-// bruh inports
+pub fn focus_window(ctx: usize) void {
+    if (window_list[ctx]) |win| {
+
+        for (win.position_x .. win.charWidth) |x| {
+            for (win.position_y .. win.charHeight) |y| {
+                win_zindex[x + y * canvasPixelWidth] = @intCast(ctx);
+            }
+        }
+
+    }
+}
+
+pub fn redraw_screen_region(x: usize, y: usize, w: usize, h: usize) void {
+    
+    for (x .. w) |i| {
+        for (y .. h) |j| {
+            
+            const win = window_list[win_zindex[i + j * canvasCharWidth]]
+                orelse window_list[0].?;
+
+            const fb = if (win.swap) win.buffer_0 else win.buffer_1;
+            const char = fb.char[(i - win.position_x) + (j - win.position_y) * canvasCharWidth];
+
+            root_draw_char(char.value, i, j);
+
+        }
+    }
+
+}
+fn root_draw_char(c: u8, posX: usize, posY: usize) void {
+    
+    const base_char = system_font.data[(c * system_font.height)..];
+
+    const rpx = posX * system_font.width * 2;
+    const rpy = posY * system_font.height * 2;
+
+    for (0 .. system_font.height) |y| {
+        const line = base_char[y];
+        for (0 .. system_font.width) |x| {
+
+            const has_col = (std.math.shr(u8, line, x) & 0x1) == 1;
+            const col: Pixel = if (has_col) .rgb(255, 255, 255) else .rgb(0, 0, 0);
+
+            const offx = x*2;
+            const offy = y*2;
+
+            root_framebuffer[(rpx + offx) + (rpy + offy) * canvasPPS] = col;
+            root_framebuffer[(rpx + offx + 1) + (rpy + offy) * canvasPPS] = col;
+            root_framebuffer[(rpx + offx) + (rpy + offy + 1) * canvasPPS] = col;
+            root_framebuffer[(rpx + offx + 1) + (rpy + offy + 1) * canvasPPS] = col;
+        }
+    }
+
+}
+
+// _bruh_imports___________________________________________________________________
 const std = @import("std");
 const os = @import("root").os;
 const bootInfo = @import("../boot/boot_info.zig");
@@ -147,6 +220,13 @@ pub const Char = packed struct(u16) {
         },
     },
     value: u8,
+
+    pub fn char(c: u8) @This() {
+        return .{
+            .color = .{ .col = .{ .foreground = .white, .background = .black } },
+            .value = c
+        };
+    }
 
     pub const CharColor = enum(u4) {
         white = 0,
@@ -191,6 +271,7 @@ pub const VideoContext = struct {
     }
 };
 pub const Win = @import("win/win.zig").Win;
+pub const Framebuffer = Win.Framebuffer;
 
 const write = os.console_write("Graphics Lib");
 const st = os.stack_tracer;
