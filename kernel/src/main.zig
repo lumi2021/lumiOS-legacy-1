@@ -39,9 +39,9 @@ pub fn main(binfo: BootInfo) noreturn {
     {
         os.gl.init(binfo.framebuffer);
 
-        for (0 .. os.gl.canvasWidth) |x| {
-            for (0 .. os.gl.canvasHeight) |y| {
-                os.gl.frameBuffer[x + y * os.gl.canvasPPS] = .rgb(x, y, x + y);
+        for (0 .. os.gl.canvasPixelWidth) |x| {
+            for (0 .. os.gl.canvasPixelHeight) |y| {
+                os.gl.root_framebuffer[x + y * os.gl.canvasPPS] = .rgb(x, y, x + y);
             }
         }
 

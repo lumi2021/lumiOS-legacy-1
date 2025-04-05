@@ -2,21 +2,21 @@ const os = @import("root").os;
 const gl = os.gl;
 
 pub const Pixel = gl.Pixel;
+pub const Char = gl.Char;
 pub const VideoMode = gl.VideoMode;
 
-pub const Win = extern struct {
+pub const Win = struct {
     width: usize,
     height: usize,
 
     mode: VideoMode,
 
     swap: bool,
-    buffer_0: packed union {
-        char: [*]u8,
+    buffer_0: Framebuffer,
+    buffer_1: Framebuffer,
+
+    pub const Framebuffer = packed union {
+        char: [*]Char,
         pixel: [*]Pixel
-    },
-    buffer_1: packed union {
-        char: [*]u8,
-        pixel: [*]Pixel
-    }
+    };
 };

@@ -54,7 +54,6 @@ pub const Task = struct {
         ptr.pipes = PipeMap.init(ptr.taskAllocator.allocator());
 
         { // stack trace config
-            ptr.stack_trace = undefined;
             ptr.stack_trace_count = 3;
 
             ptr.stack_trace[0] = @constCast("*Interrupt 20 (32)" ++ [1]u8{0} ** 110).*;

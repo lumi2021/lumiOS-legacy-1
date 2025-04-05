@@ -74,7 +74,6 @@ pub fn do_schedue(currContext: *TaskContext) void {
     if (current_task) |cTask| {
         write.dbg("Pausing task \"{s}\"...", .{cTask.name});
 
-        //st.save_task_stack_trace(cTask);
         cTask.context = currContext.*;
         current_task = null;
 

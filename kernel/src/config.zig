@@ -7,17 +7,17 @@ pub const max_ioapics = 5;
 
 pub const debug_ignore: []const KeyValuePair = &[_]KeyValuePair{
     // main setup
-    .{ .key = "Main", .value = ignore_all },
+    .{ .key = "Main", .value = default },
 
     // memory
-    .{ .key = "PMM", .value = ignore_all },
-    .{ .key = "VMM", .value = ignore_all },
+    .{ .key = "PMM", .value = default },
+    .{ .key = "VMM", .value = default },
     .{ .key = "Paging", .value = ignore_all },
 
     // threading
     .{ .key = "schedue", .value = ignore_all },
     .{ .key = "taskman", .value = ignore_all },
-    .{ .key = "task", .value = ignore_all },
+    .{ .key = "task", .value = default },
 
     // interruptions
     .{ .key = "IDTM", .value = ignore_all },
@@ -27,10 +27,10 @@ pub const debug_ignore: []const KeyValuePair = &[_]KeyValuePair{
     .{ .key = "fs", .value = default },
 
     // Drivers related
-    .{ .key = "Drivers", .value = ignore_all },
+    .{ .key = "Drivers", .value = default },
     .{ .key = "PCI", .value = default },
-    .{ .key = "xHCI", .value = ignore_all },
-    .{ .key = "ps2", .value = ignore_all },
+    .{ .key = "xHCI", .value = default },
+    .{ .key = "ps2", .value = default },
     .{ .key = "keyboard", .value = ignore_all },
     .{ .key = "mouse", .value = ignore_all },
 
@@ -38,7 +38,7 @@ pub const debug_ignore: []const KeyValuePair = &[_]KeyValuePair{
     .{ .key = "Alloc", .value = ignore_all },
 
     // Debug
-    .{ .key = "Stack Tracer", .value = ignore_all },
+    .{ .key = "stack_tracer", .value = ignore_all },
 };
 
 const KeyValuePair = struct { key: []const u8, value: u8 };
