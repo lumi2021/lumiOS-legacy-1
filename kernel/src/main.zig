@@ -38,10 +38,12 @@ pub fn main(binfo: BootInfo) noreturn {
     write.log("# Starting Video...", .{});
     {
         os.gl.init(binfo.framebuffer);
+        os.gl.focus_window(0);
+        var screenbuf = os.gl.get_buffer_info(0);
 
-        for (0 .. os.gl.canvasPixelWidth) |x| {
-            for (0 .. os.gl.canvasPixelHeight) |y| {
-                os.gl.root_framebuffer[x + y * os.gl.canvasPPS] = .rgb(x, y, x + y);
+        for (0 .. screenbuf.width) |x| {
+            for (0 .. screenbuf.height) |y| {
+                screenbuf.buf.pixel[x + y * screenbuf.width] = .rgb(x, y, x + y);
             }
         }
 

@@ -42,7 +42,7 @@ pub fn init(fb: bootInfo.FrameBuffer) void {
 
     window_list = allocator.alloc(?*Win, 256) catch unreachable;
     @memset(window_list, null);
-    win_zindex = allocator.alloc(u8, canvasPixelWidth * canvasPixelHeight) catch unreachable;
+    win_zindex = allocator.alloc(u8, canvasCharWidth * canvasCharHeight) catch unreachable;
     @memset(win_zindex, 0);
 
     write.log(\\
@@ -138,32 +138,56 @@ pub fn focus_window(ctx: usize) void {
 
         for (win.position_x .. win.charWidth) |x| {
             for (win.position_y .. win.charHeight) |y| {
-                win_zindex[x + y * canvasPixelWidth] = @intCast(ctx);
+                win_zindex[x + y * canvasCharWidth] = @intCast(ctx);
             }
         }
 
     }
 }
 
-pub fn redraw_screen_region(x: usize, y: usize, w: usize, h: usize) void {
+var show_z = true;
+pub fn redraw_screen_region(rx: usize, ry: usize, rw: usize, rh: usize) void {
     
-    for (x .. w) |i| {
-        for (y .. h) |j| {
+    for (rx .. (rx + rw)) |x| {
+        for (ry .. (ry + rh)) |y| {
             
-            const win = window_list[win_zindex[i + j * canvasCharWidth]]
-                orelse window_list[0].?;
+            const win = window_list[win_zindex[x + y * canvasCharWidth]]
+               orelse window_list[0].?;
 
             const fb = if (win.swap) win.buffer_0 else win.buffer_1;
-            const char = fb.char[(i - win.position_x) + (j - win.position_y) * canvasCharWidth];
 
-            root_draw_char(char.value, i, j);
+            if (show_z) {
+                root_draw_char('0' + win_zindex[x + y * canvasCharWidth], x, y);
+                show_z = !show_z;
+                continue;
+            }
+            
+            if (win.mode == .text) {
+                const char = fb.char[(x - win.position_x) + (y - win.position_y) * canvasCharWidth];
+                root_draw_char(char.value, x, y);
+            } else {
+                const rot_xbase = x * system_font.width * system_font.scale;
+                const rot_ybase = y * system_font.height * system_font.scale;
+                const win_xbase = (x - win.position_x) * system_font.width * system_font.scale;
+                const win_ybase = (y - win.position_y) * system_font.height * system_font.scale;
 
+                for (0 .. win.pixelWidth) |subx| {
+                    for (0 .. win.pixelHeight) |suby| {
+
+                        root_framebuffer[(rot_xbase + subx) + (rot_ybase + suby) * canvasPPS] = 
+                        fb.pixel[(win_xbase + subx) + (win_ybase + suby) * win.pixelWidth];
+
+                    }
+                }
+            }
+
+            show_z = !show_z;
         }
     }
 
 }
 fn root_draw_char(c: u8, posX: usize, posY: usize) void {
-    
+
     const base_char = system_font.data[(c * system_font.height)..];
 
     const rpx = posX * system_font.width * 2;
