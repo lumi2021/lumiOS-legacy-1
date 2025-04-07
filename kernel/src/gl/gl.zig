@@ -20,9 +20,10 @@ var allocator: Allocator = undefined;
 pub var window_list: []?*Win = undefined;
 
 pub fn init(fb: bootInfo.FrameBuffer) void {
-    st.push(@src()); defer st.pop();
+    st.push(@src());
+    defer st.pop();
 
-    system_font = @import("assets/assets.zig").fonts[0];
+    system_font = @import("assets/assets.zig").fonts[1];
     system_font.scale = 2;
 
     const fb_ptr: [*]Pixel = @ptrCast(@alignCast(fb.framebuffer));
@@ -45,23 +46,15 @@ pub fn init(fb: bootInfo.FrameBuffer) void {
     win_zindex = allocator.alloc(u8, canvasCharWidth * canvasCharHeight) catch unreachable;
     @memset(win_zindex, 0);
 
-    write.log(\\
-    \\fb size: {}
-    \\fb pos: ${X:0>16}
-    \\pps: {}
-    \\bpp: {}
-    \\canvas width: {} pixels, {} chars
-    \\canvas height: {} pixels, {} chars
-    , .{
-        root_framebuffer.len,
-        os.memory.paddr_from_vaddr(@intFromPtr(root_framebuffer.ptr)),
-        canvasPPS,
-        canvasBPP,
-        canvasPixelWidth, canvasCharWidth,
-        canvasPixelHeight, canvasCharHeight
-    });
-
-    _ = create_window(.graph, canvasCharWidth, canvasCharHeight);
+    write.log(
+        \\
+        \\fb size: {}
+        \\fb pos: ${X:0>16}
+        \\pps: {}
+        \\bpp: {}
+        \\canvas width: {} pixels, {} chars
+        \\canvas height: {} pixels, {} chars
+    , .{ root_framebuffer.len, os.memory.paddr_from_vaddr(@intFromPtr(root_framebuffer.ptr)), canvasPPS, canvasBPP, canvasPixelWidth, canvasCharWidth, canvasPixelHeight, canvasCharHeight });
 
     ready = true;
 }
@@ -70,13 +63,12 @@ pub inline fn get_system_font() Font {
     return system_font;
 }
 
-
 // user side
-pub fn create_window(mode: VideoMode, width: usize, height: usize) usize {
+pub fn create_window(mode: VideoMode, width: usize, height: usize, hasborder: bool) usize {
     st.push(@src()); defer st.pop();
 
-    const free_window_index: usize = b: { 
-        for (0 .. window_list.len) |i| {
+    const free_window_index: usize = b: {
+        for (0..window_list.len) |i| {
             if (window_list[i] == null) break :b i;
         }
         @panic("No more video contexts avaiable!");
@@ -88,8 +80,8 @@ pub fn create_window(mode: VideoMode, width: usize, height: usize) usize {
     const posx = @divFloor(canvasCharWidth, 2) - @divFloor(width, 2);
     const posy = @divFloor(canvasCharHeight, 2) - @divFloor(height, 2);
 
-    nw.position_x = posx;
-    nw.position_y = posy;
+    nw.position_x = @intCast(posx);
+    nw.position_y = @intCast(posy);
 
     nw.charWidth = width;
     nw.charHeight = height;
@@ -97,35 +89,28 @@ pub fn create_window(mode: VideoMode, width: usize, height: usize) usize {
     nw.pixelWidth = width * system_font.width * system_font.scale;
     nw.pixelHeight = height * system_font.height * system_font.scale;
 
+    nw.hasBorder = hasborder;
+
     nw.mode = mode;
     if (mode == .text) {
-        nw.buffer_0.char = (allocator.alloc(Char, nw.charWidth * nw.charHeight) catch unreachable).ptr;
-        nw.buffer_1.char = (allocator.alloc(Char, nw.charWidth * nw.charHeight) catch unreachable).ptr;
-        @memset(nw.buffer_0.char[0..(nw.charWidth * nw.charHeight)], Char{
-            .color = .{ .byte = 0b0000_0001 },
-            .value = ' '});
-        @memset(nw.buffer_1.char[0..(nw.charWidth * nw.charHeight)], Char{
-            .color = .{ .byte = 0b0000_0001 },
-            .value = ' '});
+        const buf = allocator.alloc(Char, nw.charWidth * nw.charHeight * 2) catch unreachable;
+        nw.buffer_0.char = (buf[0..]).ptr;
+        nw.buffer_1.char = (buf[nw.charWidth * nw.charHeight..]).ptr;
+        @memset(buf, Char{ .color = .{ .byte = 0b0000_0001 }, .value = ' ' });
     } else {
-        nw.buffer_0.pixel = (allocator.alloc(Pixel, nw.pixelWidth * nw.pixelHeight) catch unreachable).ptr;
-        nw.buffer_1.pixel = (allocator.alloc(Pixel, nw.pixelWidth * nw.pixelHeight) catch unreachable).ptr;
-        @memset(nw.buffer_0.pixel[0..(nw.pixelWidth * nw.pixelHeight)], .rgb(0, 0, 0));
-        @memset(nw.buffer_1.pixel[0..(nw.pixelWidth * nw.pixelHeight)], .rgb(0, 0, 0));
+        const buf = allocator.alloc(Pixel, nw.pixelWidth * nw.pixelHeight * 2) catch unreachable;
+        nw.buffer_0.pixel = (buf[0..]).ptr;
+        nw.buffer_1.pixel = (buf[nw.pixelWidth * nw.pixelHeight ..]).ptr;
+        @memset(buf, .rgb(0, 0, 0));
     }
 
-    focus_window(free_window_index);
     return free_window_index;
 }
 
-pub fn get_buffer_info(ctx: usize) struct {buf: Framebuffer, width: usize, height: usize} {
+pub fn get_buffer_info(ctx: usize) struct { buf: Framebuffer, width: usize, height: usize } {
     const window = window_list[ctx] orelse @panic("Invalid context descriptor");
     const fb = if (!window.swap) window.buffer_0 else window.buffer_1;
-    return .{
-        .buf = fb,
-        .width = if (window.mode == .text) window.charWidth else window.pixelWidth,
-        .height = if (window.mode == .text) window.charHeight else window.pixelHeight
-    };
+    return .{ .buf = fb, .width = if (window.mode == .text) window.charWidth else window.pixelWidth, .height = if (window.mode == .text) window.charHeight else window.pixelHeight };
 }
 
 pub fn swap_buffer(ctx: usize) void {
@@ -134,74 +119,88 @@ pub fn swap_buffer(ctx: usize) void {
 // --------
 
 pub fn focus_window(ctx: usize) void {
-    if (window_list[ctx]) |win| {
+    st.push(@src()); defer st.pop();
 
-        for (win.position_x .. win.charWidth) |x| {
-            for (win.position_y .. win.charHeight) |y| {
+    if (window_list[ctx]) |win| {
+        const withBorders = win.hasBorder;
+
+        var start_x = win.position_x + @as(isize, if (withBorders) -1 else 0);
+        var end_x = win.position_x + @as(isize, @intCast(win.charWidth)) + @as(isize, (if (withBorders) 1 else 0));
+        var start_y = win.position_y + @as(isize, if (withBorders) -1 else 0);
+        var end_y = win.position_y + @as(isize, @intCast(win.charHeight)) + @as(isize, if (withBorders) 1 else 0);
+
+        start_x = @max(0, start_x);
+        start_y = @max(0, start_y);
+        end_x = @min(@as(isize, @bitCast(canvasCharWidth)), end_x);
+        end_y = @min(@as(isize, @bitCast(canvasCharHeight)), end_y);
+
+        write.log("{} .. {}", .{start_x, end_x});
+        write.log("{} .. {}", .{start_y, end_y});
+
+        for (@bitCast(start_x) .. @bitCast(end_x)) |x| {
+            for (@bitCast(start_y) .. @bitCast(end_y)) |y| {
+
                 win_zindex[x + y * canvasCharWidth] = @intCast(ctx);
+
             }
         }
-
     }
 }
 
-var show_z = true;
+var show_z = false;
 pub fn redraw_screen_region(rx: usize, ry: usize, rw: usize, rh: usize) void {
-    
-    for (rx .. (rx + rw)) |x| {
-        for (ry .. (ry + rh)) |y| {
-            
-            const win = window_list[win_zindex[x + y * canvasCharWidth]]
-               orelse window_list[0].?;
+    for (rx..(rx + rw)) |x| {
+        for (ry..(ry + rh)) |y| {
 
-            const fb = if (win.swap) win.buffer_0 else win.buffer_1;
+            const win = window_list[win_zindex[x + y * canvasCharWidth]] orelse window_list[0].?;
 
-            if (show_z) {
-                root_draw_char('0' + win_zindex[x + y * canvasCharWidth], x, y);
-                show_z = !show_z;
-                continue;
-            }
-            
-            if (win.mode == .text) {
-                const char = fb.char[(x - win.position_x) + (y - win.position_y) * canvasCharWidth];
-                root_draw_char(char.value, x, y);
+            if (win.hasBorder and (
+                x < win.position_x or x >= (win.position_x + @as(isize, @bitCast(win.charWidth))) or
+                y < win.position_y or y >= (win.position_y + @as(isize, @bitCast(win.charHeight)))
+            )) {
+                const right = win.position_x + @as(isize, @bitCast(win.charWidth));
+                const bottom = win.position_y + @as(isize, @bitCast(win.charHeight));
+
+                if (x < win.position_x) root_draw_char(if (y < win.position_y) 201 else if (y >= bottom) 200 else 186, x, y)
+                else if (x >= right) root_draw_char(if (y < win.position_y) 187 else if (y >= bottom) 188 else 186, x, y)
+                else root_draw_char(205, x, y);
             } else {
-                const rot_xbase = x * system_font.width * system_font.scale;
-                const rot_ybase = y * system_font.height * system_font.scale;
-                const win_xbase = (x - win.position_x) * system_font.width * system_font.scale;
-                const win_ybase = (y - win.position_y) * system_font.height * system_font.scale;
 
-                for (0 .. win.pixelWidth) |subx| {
-                    for (0 .. win.pixelHeight) |suby| {
+                if (show_z) {
+                    root_draw_char('0' + win_zindex[x + y * canvasCharWidth], x, y);
+                    continue;
+                }
 
-                        root_framebuffer[(rot_xbase + subx) + (rot_ybase + suby) * canvasPPS] = 
-                        fb.pixel[(win_xbase + subx) + (win_ybase + suby) * win.pixelWidth];
+                const fb = if (win.swap) win.buffer_0 else win.buffer_1;
 
-                    }
+                if (win.mode == .text) {
+                    const curx = x - @as(usize, @bitCast(win.position_x));
+                    const cury = y - @as(usize, @bitCast(win.position_y));
+                    const char = fb.char[curx + cury * win.charWidth].value;
+                    root_draw_char(char, x, y);
                 }
             }
 
-            show_z = !show_z;
         }
     }
 
+    //show_z = !show_z;
+
 }
 fn root_draw_char(c: u8, posX: usize, posY: usize) void {
-
     const base_char = system_font.data[(c * system_font.height)..];
 
     const rpx = posX * system_font.width * 2;
     const rpy = posY * system_font.height * 2;
 
-    for (0 .. system_font.height) |y| {
+    for (0..system_font.height) |y| {
         const line = base_char[y];
-        for (0 .. system_font.width) |x| {
-
-            const has_col = (std.math.shr(u8, line, x) & 0x1) == 1;
+        for (0..system_font.width) |x| {
+            const has_col = (std.math.shr(u8, line, 8 - x) & 0x1) == 1;
             const col: Pixel = if (has_col) .rgb(255, 255, 255) else .rgb(0, 0, 0);
 
-            const offx = x*2;
-            const offy = y*2;
+            const offx = x * 2;
+            const offy = y * 2;
 
             root_framebuffer[(rpx + offx) + (rpy + offy) * canvasPPS] = col;
             root_framebuffer[(rpx + offx + 1) + (rpy + offy) * canvasPPS] = col;
@@ -209,7 +208,6 @@ fn root_draw_char(c: u8, posX: usize, posY: usize) void {
             root_framebuffer[(rpx + offx + 1) + (rpy + offy + 1) * canvasPPS] = col;
         }
     }
-
 }
 
 // _bruh_imports___________________________________________________________________
@@ -227,29 +225,18 @@ pub const Pixel = packed struct(u32) {
     alpha: u8,
 
     pub inline fn rgb(r: usize, g: usize, b: usize) Pixel {
-        return .{
-            .red = @intCast(r & 0xFF),
-            .green = @intCast(g & 0xFF),
-            .blue = @intCast(b & 0xFF),
-            .alpha = 0
-        };
+        return .{ .red = @intCast(r & 0xFF), .green = @intCast(g & 0xFF), .blue = @intCast(b & 0xFF), .alpha = 0 };
     }
 };
 pub const Char = packed struct(u16) {
     color: packed union {
         byte: u8,
-        col: packed struct(u8) {
-            foreground: CharColor,
-            background: CharColor
-        },
+        col: packed struct(u8) { foreground: CharColor, background: CharColor },
     },
     value: u8,
 
     pub fn char(c: u8) @This() {
-        return .{
-            .color = .{ .col = .{ .foreground = .white, .background = .black } },
-            .value = c
-        };
+        return .{ .color = .{ .col = .{ .foreground = .white, .background = .black } }, .value = c };
     }
 
     pub const CharColor = enum(u4) {
@@ -264,7 +251,6 @@ pub const Font = text.Font;
 
 pub const VideoMode = enum { text, graph };
 pub const VideoContext = struct {
-    
     window: *Win,
 
     pub fn init(winWidth: usize, winHeight: usize, mode: VideoMode) @This() {
@@ -283,8 +269,7 @@ pub const VideoContext = struct {
             const b2 = allocator.alloc(u8, winHeight * winWidth) catch unreachable;
             newvctx.window.buffer_0 = .{ .char = b1.ptr };
             newvctx.window.buffer_1 = .{ .char = b2.ptr };
-        }
-        else if (mode == .graph) {
+        } else if (mode == .graph) {
             const b1 = allocator.alloc(u8, winHeight * winWidth * 4) catch unreachable;
             const b2 = allocator.alloc(u8, winHeight * winWidth * 4) catch unreachable;
             newvctx.window.buffer_0 = .{ .graph = b1.ptr };

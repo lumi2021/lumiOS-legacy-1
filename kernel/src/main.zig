@@ -9,7 +9,9 @@ const io = os.port_io;
 
 pub var boot_info: BootInfo = undefined;
 
-comptime { _ = @import("boot/boot_entry.zig"); }
+comptime {
+    _ = @import("boot/boot_entry.zig");
+}
 
 const write = os.console_write("Main");
 const st = os.stack_tracer;
@@ -38,12 +40,14 @@ pub fn main(binfo: BootInfo) noreturn {
     write.log("# Starting Video...", .{});
     {
         os.gl.init(binfo.framebuffer);
-        os.gl.focus_window(0);
-        var screenbuf = os.gl.get_buffer_info(0);
 
-        for (0 .. screenbuf.width) |x| {
-            for (0 .. screenbuf.height) |y| {
-                screenbuf.buf.pixel[x + y * screenbuf.width] = .rgb(x, y, x + y);
+        const win_0 = os.gl.create_window(.text, os.gl.canvasCharWidth, os.gl.canvasCharHeight, false);
+        os.gl.focus_window(win_0);
+        var screenbuf = os.gl.get_buffer_info(win_0);
+
+        for (0..screenbuf.width) |x| {
+            for (0..screenbuf.height) |y| {
+                screenbuf.buf.char[x + y * screenbuf.width] = .char('#');
             }
         }
 
@@ -55,15 +59,12 @@ pub fn main(binfo: BootInfo) noreturn {
         //os.GL.text.drawBigString("LUMI OS", centerX, centerY);
         //os.GL.text.drawString(" 0.1.0 ", centerX2, centerY2 + 40);
 
+        os.gl.swap_buffer(win_0);
     }
 
     write.log("# Starting initialization programs...", .{});
     {
-        _ = os.theading.run_process(
-            @constCast("Adam"),
-            sysprocs.adam.init,
-            null, 0
-        ) catch @panic("Cannot initialize Adam");
+        _ = os.theading.run_process(@constCast("Adam"), sysprocs.adam.init, null, 0) catch @panic("Cannot initialize Adam");
     }
 
     os.fs.lsrecursive();
@@ -79,7 +80,8 @@ pub fn main(binfo: BootInfo) noreturn {
 }
 
 fn kernel_setup() void {
-    st.push(@src()); defer st.pop();
+    st.push(@src());
+    defer st.pop();
 
     errdefer @panic("Error during kernel sutup!");
 
@@ -133,7 +135,6 @@ fn setup_timer() void {
     io.outb(0x40, @intCast(divisor & 0xFF));
     io.outb(0x40, @intCast((divisor >> 8) & 0xFF));
 }
-
 
 pub fn panic(msg: []const u8, stack_trace: ?*builtin.StackTrace, return_address: ?usize) noreturn {
     _ = return_address;

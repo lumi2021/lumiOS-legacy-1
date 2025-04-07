@@ -12,19 +12,20 @@ pub fn init(_: ?*anyopaque) callconv(.C) isize {
 }
 
 fn update_screen() void {
-    // const winlist = gl.window_list;
+    const winlist = gl.window_list;
 
-    // for (0 .. winlist.len) |i| if (winlist[i]) |win| {
-        
-    //     gl.swap_buffer(i);
-    //     gl.redraw_screen_region(
-    //         win.position_x,
-    //         win.position_y,
-    //         win.position_x + win.charWidth,
-    //         win.position_y + win.charHeight
-    //     );
+    for (0 .. winlist.len) |i| if (winlist[i]) |_| {
 
-    // };
+        // gl.swap_buffer(i);
+        // gl.redraw_screen_region(
+        //     win.position_x,
+        //     win.position_y,
+        //     win.position_x + win.charWidth,
+        //     win.position_y + win.charHeight
+        // );
 
-    gl.redraw_screen_region(0, 0, 80, 50);
+    };
+
+    gl.redraw_screen_region(0, 0, gl.canvasCharWidth, gl.canvasCharHeight);
+
 }

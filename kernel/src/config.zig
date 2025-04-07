@@ -30,7 +30,7 @@ pub const debug_ignore: []const KeyValuePair = &[_]KeyValuePair{
     .{ .key = "Drivers", .value = default },
     .{ .key = "PCI", .value = default },
     .{ .key = "xHCI", .value = default },
-    .{ .key = "ps2", .value = default },
+    .{ .key = "ps2", .value = ignore_all },
     .{ .key = "keyboard", .value = ignore_all },
     .{ .key = "mouse", .value = ignore_all },
 
