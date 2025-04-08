@@ -16,12 +16,12 @@ pub fn init(_: ?*anyopaque) callconv(.C) isize {
     osstd.debug.print("Initializing Window manager...\n", .{});
     _ = osstd.process.create_thead("winman", sysprocs.winman.init, null);
 
-    osstd.debug.print("Initializing Adam window...\n", .{});
-    win = gl.create_window(.text, 16, 18, true);
-    gl.focus_window(win);
+    //osstd.debug.print("Initializing Adam window...\n", .{});
+    //win = gl.create_window(.text, 16, 18, true);
+    //gl.focus_window(win);
 
-    osstd.debug.print("Drawing ascii...\n", .{});
-    draw_ascii();
+    //osstd.debug.print("Drawing ascii...\n", .{});
+    //draw_ascii();
 
     while (true) {}
 }

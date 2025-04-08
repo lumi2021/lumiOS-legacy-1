@@ -22,13 +22,14 @@ var arena: std.heap.ArenaAllocator = undefined;
 var allocator: Allocator = undefined;
 
 pub var window_list: []?*Win = undefined;
+pub var cursor: struct { pos_x: isize, pos_y: isize } = undefined;
+var cursor_texture: []const u8 = undefined;
 
 pub fn init(fb: bootInfo.FrameBuffer) void {
-    st.push(@src());
-    defer st.pop();
+    st.push(@src()); defer st.pop();
 
-    system_font = assets.fonts[0];
-    system_font.scale = 2;
+    system_font = assets.fonts[7];
+    system_font.scale = 1;
     system_font_width = system_font.width * system_font.scale + 1 * system_font.scale + 1;
     system_font_height = system_font.height * system_font.scale;
 
@@ -42,6 +43,10 @@ pub fn init(fb: bootInfo.FrameBuffer) void {
     canvasPixelHeight = fb.height;
     canvasCharWidth = @divTrunc(fb.width, system_font_width);
     canvasCharHeight = @divTrunc(fb.height, system_font_height);
+
+    cursor.pos_x = @divFloor(@as(isize, @bitCast(canvasPixelWidth)), 2);
+    cursor.pos_y = @divFloor(@as(isize, @bitCast(canvasPixelHeight)), 2);
+    cursor_texture = assets.cursors[0][16..];
 
     // setting up arena allocator
     arena = std.heap.ArenaAllocator.init(os.memory.allocator);
@@ -216,6 +221,26 @@ pub fn redraw_screen_region(rx: isize, ry: isize, rw: isize, rh: isize) void {
                     }
 
                 }
+            }
+        }
+    }
+
+    redraw_cursor();
+}
+pub fn redraw_cursor() void {
+    for (0 .. 32) |x| {
+        for (0 .. 32) |y| {
+
+            const rcpx = cursor.pos_x + @as(isize, @bitCast(x)) - 16;
+            const rcpy = cursor.pos_y + @as(isize, @bitCast(y)) - 16;
+            const tbase = (x + y * 128) * 4;
+
+            if (cursor_texture[tbase + 3] > 128) {
+                root_framebuffer[@as(usize, @intCast(rcpx)) + @as(usize, @intCast(rcpy)) * canvasPPS] = .rgb(
+                    cursor_texture[tbase + 2],
+                    cursor_texture[tbase + 1],
+                    cursor_texture[tbase + 0]
+                );
             }
 
         }

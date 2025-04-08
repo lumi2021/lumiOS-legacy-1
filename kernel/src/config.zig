@@ -32,7 +32,7 @@ pub const debug_ignore: []const KeyValuePair = &[_]KeyValuePair{
     .{ .key = "xHCI", .value = default },
     .{ .key = "ps2", .value = ignore_all },
     .{ .key = "keyboard", .value = ignore_all },
-    .{ .key = "mouse", .value = ignore_all },
+    .{ .key = "mouse", .value = default },
 
     // Allocations
     .{ .key = "Alloc", .value = ignore_all },

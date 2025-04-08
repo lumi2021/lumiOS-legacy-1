@@ -45,7 +45,7 @@ pub fn main(binfo: BootInfo) noreturn {
         os.gl.focus_window(win_0);
         var screenbuf = os.gl.get_buffer_info(win_0);
 
-        const wpp = os.gl.assets.wallpapers[4];
+        const wpp = os.gl.assets.wallpapers[5];
 
         const width = std.mem.readInt(u32, wpp[4..8], .big);
         const height = std.mem.readInt(u32, wpp[8..12], .big);

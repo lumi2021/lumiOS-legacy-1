@@ -61,8 +61,8 @@ pub fn build(b: *Build) void {
         //"-enable-kvm",
 
         // serial, video, etc
-        "-serial", "file:serial.txt",
-        "-monitor", "mon:stdio",
+        "-serial", "mon:stdio", //"file:serial.txt",
+        //"-monitor", "mon:stdio",
         "-display", "gtk,zoom-to-fit=on",
 
         // Aditional devices
