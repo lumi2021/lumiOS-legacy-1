@@ -22,7 +22,7 @@ var arena: std.heap.ArenaAllocator = undefined;
 var allocator: Allocator = undefined;
 
 pub var window_list: []?*Win = undefined;
-pub var cursor: struct { pos_x: isize, pos_y: isize } = undefined;
+var cursor: struct { pos_x: isize, pos_y: isize } = undefined;
 var cursor_texture: []const u8 = undefined;
 
 pub fn init(fb: bootInfo.FrameBuffer) void {
@@ -30,8 +30,8 @@ pub fn init(fb: bootInfo.FrameBuffer) void {
 
     system_font = assets.fonts[7];
     system_font.scale = 1;
-    system_font_width = system_font.width * system_font.scale + 1 * system_font.scale + 1;
-    system_font_height = system_font.height * system_font.scale;
+    system_font_width = (system_font.width + 1) * system_font.scale + 1;
+    system_font_height = (system_font.height + 1) * system_font.scale;
 
     const fb_ptr: [*]Pixel = @ptrCast(@alignCast(fb.framebuffer));
     root_framebuffer = fb_ptr[0..(fb.size / 4)];
@@ -44,8 +44,8 @@ pub fn init(fb: bootInfo.FrameBuffer) void {
     canvasCharWidth = @divTrunc(fb.width, system_font_width);
     canvasCharHeight = @divTrunc(fb.height, system_font_height);
 
-    cursor.pos_x = @divFloor(@as(isize, @bitCast(canvasPixelWidth)), 2);
-    cursor.pos_y = @divFloor(@as(isize, @bitCast(canvasPixelHeight)), 2);
+    cursor.pos_x = 0;
+    cursor.pos_y = 0;
     cursor_texture = assets.cursors[0][16..];
 
     // setting up arena allocator
@@ -153,9 +153,6 @@ pub fn focus_window(ctx: usize) void {
         end_x = @min(@as(isize, @bitCast(canvasCharWidth)), end_x);
         end_y = @min(@as(isize, @bitCast(canvasCharHeight)), end_y);
 
-        write.log("{} .. {}", .{start_x, end_x});
-        write.log("{} .. {}", .{start_y, end_y});
-
         for (@bitCast(start_x) .. @bitCast(end_x)) |x| {
             for (@bitCast(start_y) .. @bitCast(end_y)) |y| {
 
@@ -168,13 +165,15 @@ pub fn focus_window(ctx: usize) void {
 
 var show_z = false;
 pub fn redraw_screen_region(rx: isize, ry: isize, rw: isize, rh: isize) void {
+    st.push(@src()); defer st.pop();
+
     const rrx = @max(rx, 0);
     const rry = @max(ry, 0);
-    const rrw = @min(rw, @as(isize, @bitCast(canvasCharWidth)));
-    const rrh = @min(rh, @as(isize, @bitCast(canvasCharHeight)));
+    const rex = @min(rx + rw, @as(isize, @bitCast(canvasCharWidth)));
+    const reh = @min(ry + rh, @as(isize, @bitCast(canvasCharHeight)));
 
-    for (@intCast(rrx) .. @intCast(rrx + rrw)) |x| {
-        for (@intCast(rry) .. @intCast(rry + rrh)) |y| {
+    for (@intCast(rrx) .. @intCast(rex)) |x| {
+        for (@intCast(rry) .. @intCast(reh)) |y| {
 
             const win = window_list[win_zindex[x + y * canvasCharWidth]] orelse window_list[0].?;
 
@@ -227,13 +226,28 @@ pub fn redraw_screen_region(rx: isize, ry: isize, rw: isize, rh: isize) void {
 
     redraw_cursor();
 }
+pub fn move_cursor(posx: isize, posy: isize) void {
+    st.push(@src()); defer st.pop();
+
+    const px = @divFloor(cursor.pos_x, @as(isize, @bitCast(system_font_width)));
+    const py = @divFloor(cursor.pos_y, @as(isize, @bitCast(system_font_height)));
+
+    cursor.pos_x = posx;
+    cursor.pos_y = posy;
+
+    redraw_screen_region(px - 3, py - 3, 6, 6);
+}
 pub fn redraw_cursor() void {
+    st.push(@src()); defer st.pop();
+
     for (0 .. 32) |x| {
         for (0 .. 32) |y| {
 
             const rcpx = cursor.pos_x + @as(isize, @bitCast(x)) - 16;
             const rcpy = cursor.pos_y + @as(isize, @bitCast(y)) - 16;
             const tbase = (x + y * 128) * 4;
+
+            if (rcpx < 0 or rcpx >= canvasPixelWidth or rcpy < 0 or rcpy >= canvasPixelHeight) continue;
 
             if (cursor_texture[tbase + 3] > 128) {
                 root_framebuffer[@as(usize, @intCast(rcpx)) + @as(usize, @intCast(rcpy)) * canvasPPS] = .rgb(
@@ -247,6 +261,8 @@ pub fn redraw_cursor() void {
     }
 }
 fn root_draw_char(c: u8, posX: usize, posY: usize) void {
+    st.push(@src()); defer st.pop();
+
     const base_char = system_font.data[(c * system_font.height)..];
 
     const rpx = posX * system_font_width;
