@@ -26,6 +26,6 @@ fn update_screen() void {
 
     };
 
-    gl.redraw_screen_region(0, 0, gl.canvasCharWidth, gl.canvasCharHeight);
+    //gl.redraw_screen_region(0, 0, @bitCast(gl.canvasCharWidth), @bitCast(gl.canvasCharHeight));
 
 }

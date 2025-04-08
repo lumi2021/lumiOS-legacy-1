@@ -41,13 +41,28 @@ pub fn main(binfo: BootInfo) noreturn {
     {
         os.gl.init(binfo.framebuffer);
 
-        const win_0 = os.gl.create_window(.text, os.gl.canvasCharWidth, os.gl.canvasCharHeight, false);
+        const win_0 = os.gl.create_window(.graph, os.gl.canvasCharWidth, os.gl.canvasCharHeight, false);
         os.gl.focus_window(win_0);
         var screenbuf = os.gl.get_buffer_info(win_0);
 
+        const wpp = os.gl.assets.wallpapers[4];
+
+        const width = std.mem.readInt(u32, wpp[4..8], .big);
+        const height = std.mem.readInt(u32, wpp[8..12], .big);
+        
+        const pixels: [*]os.gl.Pixel = @ptrCast(@alignCast(@constCast(wpp[16..].ptr)));
+
         for (0..screenbuf.width) |x| {
             for (0..screenbuf.height) |y| {
-                screenbuf.buf.char[x + y * screenbuf.width] = .char('#');
+
+                const percent_x: f32 = @as(f32, @floatFromInt(x)) / @as(f32, @floatFromInt(screenbuf.width));
+                const percent_y: f32 = @as(f32, @floatFromInt(y)) / @as(f32, @floatFromInt(screenbuf.height));
+                const uv_x: usize = @intFromFloat(percent_x * width);
+                const uv_y: usize = @intFromFloat(percent_y * height);
+
+                const src = pixels[uv_x + uv_y * width];
+
+                screenbuf.buf.pixel[x + y * screenbuf.width] = .rgb(src.blue, src.green, src.red);
             }
         }
 

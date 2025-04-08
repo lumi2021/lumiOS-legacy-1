@@ -11,8 +11,12 @@ pub var canvasCharWidth: usize = 0;
 pub var canvasCharHeight: usize = 0;
 
 var system_font: Font = undefined;
+var system_font_width: usize = undefined;
+var system_font_height: usize = undefined;
 
 pub var ready = false;
+
+pub const assets = @import("assets/assets.zig");
 
 var arena: std.heap.ArenaAllocator = undefined;
 var allocator: Allocator = undefined;
@@ -23,8 +27,10 @@ pub fn init(fb: bootInfo.FrameBuffer) void {
     st.push(@src());
     defer st.pop();
 
-    system_font = @import("assets/assets.zig").fonts[1];
+    system_font = assets.fonts[0];
     system_font.scale = 2;
+    system_font_width = system_font.width * system_font.scale + 1 * system_font.scale + 1;
+    system_font_height = system_font.height * system_font.scale;
 
     const fb_ptr: [*]Pixel = @ptrCast(@alignCast(fb.framebuffer));
     root_framebuffer = fb_ptr[0..(fb.size / 4)];
@@ -34,8 +40,8 @@ pub fn init(fb: bootInfo.FrameBuffer) void {
 
     canvasPixelWidth = fb.width;
     canvasPixelHeight = fb.height;
-    canvasCharWidth = @divTrunc(fb.width, system_font.width * system_font.scale);
-    canvasCharHeight = @divTrunc(fb.height, system_font.height * system_font.scale);
+    canvasCharWidth = @divTrunc(fb.width, system_font_width);
+    canvasCharHeight = @divTrunc(fb.height, system_font_height);
 
     // setting up arena allocator
     arena = std.heap.ArenaAllocator.init(os.memory.allocator);
@@ -86,8 +92,8 @@ pub fn create_window(mode: VideoMode, width: usize, height: usize, hasborder: bo
     nw.charWidth = width;
     nw.charHeight = height;
 
-    nw.pixelWidth = width * system_font.width * system_font.scale;
-    nw.pixelHeight = height * system_font.height * system_font.scale;
+    nw.pixelWidth = width * system_font_width;
+    nw.pixelHeight = height * system_font_height;
 
     nw.hasBorder = hasborder;
 
@@ -114,7 +120,15 @@ pub fn get_buffer_info(ctx: usize) struct { buf: Framebuffer, width: usize, heig
 }
 
 pub fn swap_buffer(ctx: usize) void {
-    if (window_list[ctx]) |win| win.swap = !win.swap;
+    if (window_list[ctx]) |win| {
+        win.swap = !win.swap;
+        redraw_screen_region(
+            win.position_x - 1,
+            win.position_y - 1,
+            win.position_x + @as(isize, @bitCast(win.charWidth)) + 1,
+            win.position_y + @as(isize, @bitCast(win.charHeight)) + 1
+        );
+    }
 }
 // --------
 
@@ -148,9 +162,14 @@ pub fn focus_window(ctx: usize) void {
 }
 
 var show_z = false;
-pub fn redraw_screen_region(rx: usize, ry: usize, rw: usize, rh: usize) void {
-    for (rx..(rx + rw)) |x| {
-        for (ry..(ry + rh)) |y| {
+pub fn redraw_screen_region(rx: isize, ry: isize, rw: isize, rh: isize) void {
+    const rrx = @max(rx, 0);
+    const rry = @max(ry, 0);
+    const rrw = @min(rw, @as(isize, @bitCast(canvasCharWidth)));
+    const rrh = @min(rh, @as(isize, @bitCast(canvasCharHeight)));
+
+    for (@intCast(rrx) .. @intCast(rrx + rrw)) |x| {
+        for (@intCast(rry) .. @intCast(rry + rrh)) |y| {
 
             const win = window_list[win_zindex[x + y * canvasCharWidth]] orelse window_list[0].?;
 
@@ -174,38 +193,61 @@ pub fn redraw_screen_region(rx: usize, ry: usize, rw: usize, rh: usize) void {
                 const fb = if (win.swap) win.buffer_0 else win.buffer_1;
 
                 if (win.mode == .text) {
+
                     const curx = x - @as(usize, @bitCast(win.position_x));
                     const cury = y - @as(usize, @bitCast(win.position_y));
                     const char = fb.char[curx + cury * win.charWidth].value;
                     root_draw_char(char, x, y);
+
+                } else {
+
+                    const realx: usize = x * system_font_width;
+                    const realy: usize = y * system_font_height;
+                    const realWinPosx = @as(usize, @bitCast(win.position_x)) * system_font_width;
+                    const realWinPosy = @as(usize, @bitCast(win.position_y)) * system_font_height;
+
+                    for (0 .. system_font_height) |y2| {
+                        for (0 .. system_font_width) |x2| {
+
+                            const pval = fb.pixel[(realx - realWinPosx + x2) + (realy - realWinPosy + y2) * win.pixelWidth];
+                            root_framebuffer[(realx + x2) + (realy + y2) * canvasPPS] = pval;
+
+                        }
+                    }
+
                 }
             }
 
         }
     }
-
-    //show_z = !show_z;
-
 }
 fn root_draw_char(c: u8, posX: usize, posY: usize) void {
     const base_char = system_font.data[(c * system_font.height)..];
 
-    const rpx = posX * system_font.width * 2;
-    const rpy = posY * system_font.height * 2;
+    const rpx = posX * system_font_width;
+    const rpy = posY * system_font_height;
 
-    for (0..system_font.height) |y| {
+    for (0 .. system_font.height) |y| {
         const line = base_char[y];
-        for (0..system_font.width) |x| {
-            const has_col = (std.math.shr(u8, line, 8 - x) & 0x1) == 1;
-            const col: Pixel = if (has_col) .rgb(255, 255, 255) else .rgb(0, 0, 0);
+        for (0 .. (system_font.width + 1)) |x| {
 
-            const offx = x * 2;
-            const offy = y * 2;
+            for (0 .. system_font.scale) |x2| {
+                for (0 .. system_font.scale) |y2| {
 
-            root_framebuffer[(rpx + offx) + (rpy + offy) * canvasPPS] = col;
-            root_framebuffer[(rpx + offx + 1) + (rpy + offy) * canvasPPS] = col;
-            root_framebuffer[(rpx + offx) + (rpy + offy + 1) * canvasPPS] = col;
-            root_framebuffer[(rpx + offx + 1) + (rpy + offy + 1) * canvasPPS] = col;
+                    const has_col = (std.math.shr(u8, line, 8 - x) & 0x1) == 1;
+                    const col: Pixel = if (has_col) .rgb(255, 255, 255) else .rgb(0, 0, 0);
+
+                    const offx = x * system_font.scale + x2;
+                    const offy = y * system_font.scale + y2;
+
+                    root_framebuffer[(rpx + offx) + (rpy + offy) * canvasPPS] = col;
+                    root_framebuffer[(rpx + offx + 1) + (rpy + offy) * canvasPPS] = col;
+                    root_framebuffer[(rpx + offx) + (rpy + offy + 1) * canvasPPS] = col;
+                    root_framebuffer[(rpx + offx + 1) + (rpy + offy + 1) * canvasPPS] = col;
+
+                }
+            }
+
         }
     }
 }
