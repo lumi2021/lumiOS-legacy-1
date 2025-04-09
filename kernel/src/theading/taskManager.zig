@@ -54,14 +54,10 @@ pub fn run_process(taskName: [:0]u8, entry: ProcessEntryFunction, args: ?*const 
 
     const tid = get_first_free_tid();
 
-    write.dbg("{s}", .{if (task_list[tid]) |a| a.name else "null"});
-
     task.id = tid;
     task_list[tid] = task;
     thead_count += 1;
-
-    write.dbg("{s}", .{if (task_list[tid]) |a| a.name else "null"});
-
+    
     // create task virtual directory
     var buf: [128]u8 = undefined;
     const path = std.fmt.bufPrint(&buf, "sys:/proc/{X:0>5}", .{tid}) catch unreachable;

@@ -1,20 +1,56 @@
 # LUMI OS
 
-My experiments with OS dev.
+x86_64 Kernel and Operating System.
 
-It includes :
-- A kernel (obviously lol);
-- A library for aplications;
-- A little graphics API;
-- (very raw) Device support;
-- Some processes that runs at ring 0;
-- A simple file system;
-- Wallpapers
+Basically my experiments with OS dev, doens't expect
+windows 11 2.
+
+## Development Roadmap:
+
+**Project contents:**
+[x] A kernel (obviously lol);
+[x] A application library (WIP);
+[x] A little graphics API (WIP)
+
+**Kernel:**
+[x] System Calls;
+[x] Multitheading;
+[x] Pipes (WIP);
+[x] Processes that runs at ring 0;
+[ ] Processes that runs at user space;
+[ ] Posix compatibility
+
+**File System:**
+[x] A simple file system (WIP);
+[ ] SATA Devices support (WIP)
+
+**Device support:**
+[x] PS/2 Mouse support (WIP);
+[ ] PS/2 Keyboard support (WIP);
+[ ] USB General support;
+[ ] USB Mouse support;
+[ ] USB Keyboard support;
+[ ] Basic Graphics Card support;
+[ ] Basic Aldio Card support
+
+**Useability:**
+[x] Graphics (WIP);
+[x] Simple desktop (WIP);
+[x] Mouse Cursor (WIP);
+[x] Wallpapers;
+[ ] File Explorer;
+[ ] Task Manager;
+[ ] Settings Application
+
 
 obs: don't expect anything above working 100% :3
+It works on virtual machines like qemu and in
+physical machines too.
 
-It works on virtual machines
+## Demos and development history:
+Some prints of the OS in execution (QEMU).
+From oldest to newest:
 
-## Some prints of the OS in execution (QEMU):
 ![lilguy](.github/assets/demo_0.png)
 ![boobes](.github/assets/demo_1.png)
+![window](.github/assets/demo_2.png)
