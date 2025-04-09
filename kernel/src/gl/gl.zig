@@ -28,7 +28,7 @@ var cursor_texture: []const u8 = undefined;
 pub fn init(fb: bootInfo.FrameBuffer) void {
     st.push(@src()); defer st.pop();
 
-    system_font = assets.fonts[7];
+    system_font = assets.fonts[10];
     system_font.scale = 1;
     system_font_width = (system_font.width + 1) * system_font.scale + 1;
     system_font_height = (system_font.height + 1) * system_font.scale;
@@ -117,6 +117,11 @@ pub fn create_window(mode: VideoMode, width: usize, height: usize, hasborder: bo
 
     return free_window_index;
 }
+pub fn move_window(ctx: usize, posx: usize, posy: usize) void {
+    const window = window_list[ctx] orelse @panic("Invalid context descriptor");
+    window.position_x = @bitCast(@min(posx, canvasCharWidth - 1));
+    window.position_y = @bitCast(@min(posy, canvasCharHeight - 1));
+}
 
 pub fn get_buffer_info(ctx: usize) struct { buf: Framebuffer, width: usize, height: usize } {
     const window = window_list[ctx] orelse @panic("Invalid context descriptor");
@@ -125,6 +130,8 @@ pub fn get_buffer_info(ctx: usize) struct { buf: Framebuffer, width: usize, heig
 }
 
 pub fn swap_buffer(ctx: usize) void {
+    st.push(@src()); defer st.pop();
+
     if (window_list[ctx]) |win| {
         win.swap = !win.swap;
         redraw_screen_region(

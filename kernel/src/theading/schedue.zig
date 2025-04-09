@@ -61,7 +61,7 @@ fn select_next_task() void {
 }
 
 pub fn do_schedue(currContext: *TaskContext) void {
-    st.push(@src()); defer st.pop();
+    st.push(@src()); st.pop();
 
     write.dbg("Scheduing...", .{});
 
@@ -79,6 +79,7 @@ pub fn do_schedue(currContext: *TaskContext) void {
 
         write.dbg("Task \"{s}\" paused.", .{cTask.name});
     } else if (is_first_scheduing) {
+        write.dbg("Saving halted state...", .{});
         default_context = currContext.*;
         is_first_scheduing = false;
     }
@@ -89,11 +90,16 @@ pub fn do_schedue(currContext: *TaskContext) void {
     // load new context
     if (current_task) |cTask| {
         write.dbg("Loading task \"{s}\"...", .{cTask.name});
+
         currContext.* = cTask.context;
         st.load_task_stack_trace(cTask);
+
+        write.dbg("Task \"{s}\" loaded.", .{cTask.name});
     }
     // fallback to let it on hold
     else currContext.* = default_context;
+
+    write.dbg("Resuming task...", .{});
 }
 
 fn no_task_in_queue(currContext: *TaskContext) void {

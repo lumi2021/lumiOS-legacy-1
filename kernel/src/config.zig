@@ -16,7 +16,7 @@ pub const debug_ignore: []const KeyValuePair = &[_]KeyValuePair{
 
     // threading
     .{ .key = "schedue", .value = ignore_all },
-    .{ .key = "taskman", .value = ignore_all },
+    .{ .key = "taskman", .value = default },
     .{ .key = "task", .value = default },
 
     // interruptions

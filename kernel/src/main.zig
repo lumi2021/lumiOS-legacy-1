@@ -27,15 +27,12 @@ pub fn main(binfo: BootInfo) noreturn {
     write.log("# Starting setup routine...", .{});
     sys.sys_flags.clear_interrupt();
     kernel_setup();
+    
+    write.log("# Creating debug log history...", .{});
+    try os.debug_log.create_history();
 
     write.log("# Starting system calls...", .{});
     try os.syscalls.init();
-
-    write.log("# Starting file systems...", .{});
-    try os.fs.init();
-
-    write.log("# Starting drivers...", .{});
-    os.drivers.init_all_drivers() catch |err| @panic(@errorName(err));
 
     write.log("# Starting Video...", .{});
     {
@@ -76,6 +73,12 @@ pub fn main(binfo: BootInfo) noreturn {
 
         os.gl.swap_buffer(win_0);
     }
+
+    write.log("# Starting file systems...", .{});
+    try os.fs.init();
+
+    write.log("# Starting drivers...", .{});
+    os.drivers.init_all_drivers() catch |err| @panic(@errorName(err));
 
     write.log("# Starting initialization programs...", .{});
     {

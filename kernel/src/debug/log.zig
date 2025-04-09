@@ -1,43 +1,65 @@
 const std = @import("std");
 const os = @import("root").os;
+const fmt = std.fmt;
 const uart = os.uart;
 
 const puts = uart.uart_puts;
 const printf = uart.uart_printf;
 
+const StringList = std.ArrayList([256]u8);
+pub var history: StringList = undefined;
+pub var history_enabled: bool = false;
+
+var buf: [1024]u8 = undefined;
+
 pub fn write(comptime tag: []const u8) type {
     return struct {
         pub const log = struct {
-            pub fn f(comptime fmt: []const u8, args: anytype) void {
+            pub fn f(comptime base: []const u8, args: anytype) void {
                 if (isDisabled(tag, .Log)) return;
-                printf("[" ++ tag ++ " log] " ++ fmt ++ "\r\n", args);
+                
+                const str = fmt.bufPrint(&buf, "[" ++ tag ++ " log] " ++ base ++ "\r\n", args) catch unreachable;
+                puts(str);
+                add_to_history(str);
             }
         }.f;
 
         pub const warn = struct {
-            pub inline fn f(comptime fmt: []const u8, args: anytype) void {
+            pub inline fn f(comptime base: []const u8, args: anytype) void {
                 if (isDisabled(tag, .Warn)) return;
-                printf("[" ++ tag ++ " warn] " ++ fmt ++ "\r\n", args);
+
+                const str = fmt.bufPrint(&buf, "[" ++ tag ++ " warn] " ++ base ++ "\r\n", args) catch unreachable;
+                puts(str);
+                add_to_history(str);
             }
         }.f;
 
         pub const dbg = struct {
-            pub inline fn f(comptime fmt: []const u8, args: anytype) void {
+            pub inline fn f(comptime base: []const u8, args: anytype) void {
                 if (isDisabled(tag, .Debug)) return;
-                printf("[" ++ tag ++ " dbg] " ++ fmt ++ "\r\n", args);
+                
+                const str = fmt.bufPrint(&buf, "[" ++ tag ++ " dbg] " ++ base ++ "\r\n", args) catch unreachable;
+                puts(str);
+                add_to_history(str);
             }
         }.f;
 
         pub const err = struct {
-            pub inline fn f(comptime fmt: []const u8, args: anytype) void {
+            pub inline fn f(comptime base: []const u8, args: anytype) void {
                 if (isDisabled(tag, .Error)) return;
-                printf("[" ++ tag ++ " error] " ++ fmt ++ "\r\n", args);
+                
+                const str = fmt.bufPrint(&buf, "[" ++ tag ++ " error] " ++ base ++ "\r\n", args) catch unreachable;
+                puts(str);
+                add_to_history(str);
             }
         }.f;
 
         pub const raw = struct {
-            pub inline fn f(comptime fmt: []const u8, args: anytype) void {
-                printf(fmt, args);
+            pub inline fn f(comptime base: []const u8, args: anytype) void {
+
+                const str = fmt.bufPrint(&buf, base, args) catch unreachable;
+                puts(str);
+                add_to_history(str);
             }
         }.f;
     
@@ -60,3 +82,21 @@ const Mode = enum(u8) {
     Debug = 0b0100,
     Warn =  0b1000
 };
+
+
+pub fn create_history() !void {
+    history = StringList.init(os.memory.allocator);
+    history_enabled = true;
+}
+pub fn add_to_history(str: []const u8) void {
+    if (!history_enabled) return;
+
+    var lines = std.mem.splitAny(u8, str, "\n");
+    var line = lines.next();
+
+    while (line != null) : (line = lines.next()) {
+        const item = history.addOne() catch unreachable;
+        @memset(item, 0);
+        _ = fmt.bufPrint(item, "{s}", .{line.?}) catch unreachable;
+    }
+}
