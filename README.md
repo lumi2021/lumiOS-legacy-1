@@ -2,7 +2,7 @@
 
 x86_64 Kernel and Operating System.
 
-Basically my experiments with OS dev, doens't expect
+Basically my experiments with OS dev, does not expect
 windows 11 2.
 
 ## Development Roadmap:
