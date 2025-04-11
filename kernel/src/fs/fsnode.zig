@@ -66,7 +66,7 @@ pub const FsNode = struct {
 
 pub const FsNodeData = union(ResourceKind) {
     device: void,
-    disk: *disk.DiskEntry,
+    disk: disk.DiskEntry,
 
     file: void,
     directory: void,

@@ -83,35 +83,35 @@ fn lsRecursiveWithLevel(node: ?*FsNode, level: usize) void {
 }
 
 // Drives related
-pub inline fn get_free_drive_slot() u8 {
-    const drive_idx = brk: {
-        for (0 .. fileTree.drives.len) |i| {
-            if (fileTree.drives[i] == null) break :brk i;
-        }
-        // TODO fix support for more disks
-        @panic("WTF who have more than 16 disks in a fucking computer????");
-    };
-
-    return @intCast(drive_idx);
-}
-pub fn append_ahci_drive(disk_entry: *disk.DiskEntry) void {
+pub fn append_disk_drive(disk_entry: disk.DiskEntry) void {
     if (fileTree.drives[disk_entry.index] != null) @panic("disk slot already ocupped!");
     const drive_name: [2]u8 = .{('A' + @as(u8, @intCast(disk_entry.index))), ':'};
     fileTree.drives[disk_entry.index] = FsNode.init(&drive_name, .{ .disk = disk_entry });
 }
-pub fn reset_drive(slot: u8) void {
+pub fn reset_drive(slot: usize) void {
     st.push(@src()); defer st.pop();
     
+    const letter = 'A' + @as(u8, @intCast(slot));
     const drive = fileTree.drives[slot] orelse return;
     if (drive.data != .disk) return;
 
-    write.dbg("reseting drive {c} data...", .{'A' + slot});
+    write.dbg("reseting drive {c} data...", .{letter});
 
-    var buffer: [512]u8 = undefined;
+    var sector: [512]u8 = undefined;
+    disk.read(drive.data.disk, 0, &sector);
 
-    disk.read(drive.data.disk, 0, &buffer);
+    for (0..32) |y| {
+        for (0..16) |x| {
+            write.raw("{X:0>2} ", .{sector[x + y * 16]});
+        }
+        write.raw("\n", .{});
+    }
 
-    write.dbg("driver {c} reseted!", .{'A' + slot});
+    if (sector[0x1FE] == 0x55 and sector[0x1FF] == 0xAA) {
+        write.dbg("Sector is MBR", .{});
+    }
+
+    write.dbg("driver {c} reseted!", .{letter});
 }
 
 pub fn make_dir(path: []const u8) (OpenPathError || CreateError)!*FsNode {
@@ -278,6 +278,7 @@ const schedue = os.theading.schedue;
 const Task = os.theading.Task;
 const ResourceHandler = os.system.ResourceHandler;
 
+const drives = @import("drives.zig");
 const FAT = @import("formats/FAT.zig");
 
 const disk = os.drivers.disk;

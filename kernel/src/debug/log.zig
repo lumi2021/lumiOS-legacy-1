@@ -99,4 +99,8 @@ pub fn add_to_history(str: []const u8) void {
         @memset(item, 0);
         _ = fmt.bufPrint(item, "{s}", .{line.?}) catch unreachable;
     }
+
+    if (std.mem.sliceTo(&history.items[history.items.len - 1], '0').len == 0) {
+        _ = history.orderedRemove(history.items.len - 1);
+    }
 }

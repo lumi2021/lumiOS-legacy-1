@@ -58,7 +58,7 @@ pub fn build(b: *Build) void {
         "-M", "q35",
         //"-bios", "deps/debug/OVMF.fd", // for UEFI emulation (not recommended)
         "-m", "512M",
-        "-enable-kvm",
+        //"-enable-kvm",
 
         // serial, video, etc
         "-serial", "file:serial.txt",
@@ -74,7 +74,7 @@ pub fn build(b: *Build) void {
 
         // Debug
         "-D", "log.txt",
-        "-d", "int,cpu_reset",
+        //"-d", "int,cpu_reset",
         //"--no-reboot",
         //"--no-shutdown",
         //"-trace", "*xhci*",

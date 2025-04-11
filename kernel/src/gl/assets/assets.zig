@@ -13,7 +13,7 @@ pub const fonts = [_]Font {
         .data = @embedFile("fonts/AIXOID9.F20")
     },
     .{
-        .width = 9, .height = 16,
+        .width = 8, .height = 16,
         .scale = 1,
         .data = @embedFile("fonts/DOSJ-437.F16")
     },
@@ -23,7 +23,7 @@ pub const fonts = [_]Font {
         .data = @embedFile("fonts/NORTON0.F16")
     },
     .{
-        .width = 9, .height = 16,
+        .width = 8, .height = 16,
         .scale = 1,
         .data = @embedFile("fonts/SCRAWL2.F16")
     },

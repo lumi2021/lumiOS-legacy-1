@@ -24,7 +24,7 @@ pub fn init(_: ?*anyopaque) callconv(.C) isize {
     ascii_win = gl.create_window(.text, 16, 18, true);
     gl.focus_window(ascii_win);
 
-    debug_win = gl.create_window(.text, 60, 80, true);
+    debug_win = gl.create_window(.text, 60, 35, true);
     gl.move_window(debug_win, 2, 2);
     gl.focus_window(debug_win);
 
