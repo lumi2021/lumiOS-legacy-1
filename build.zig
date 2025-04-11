@@ -58,11 +58,11 @@ pub fn build(b: *Build) void {
         "-M", "q35",
         //"-bios", "deps/debug/OVMF.fd", // for UEFI emulation (not recommended)
         "-m", "512M",
-        //"-enable-kvm",
+        "-enable-kvm",
 
         // serial, video, etc
-        "-serial", "mon:stdio", //"file:serial.txt",
-        //"-monitor", "mon:stdio",
+        "-serial", "file:serial.txt",
+        "-monitor", "mon:stdio",
         "-display", "gtk,zoom-to-fit=on",
 
         // Aditional devices

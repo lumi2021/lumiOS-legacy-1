@@ -24,15 +24,18 @@ pub const debug_ignore: []const KeyValuePair = &[_]KeyValuePair{
     .{ .key = "syscall", .value = ignore_all },
 
     // file system
-    .{ .key = "fs", .value = default },
+    .{ .key = "fs", .value = ignore_all },
 
     // Drivers related
-    .{ .key = "Drivers", .value = default },
+    .{ .key = "Drivers", .value = ignore_all },
     .{ .key = "PCI", .value = default },
-    .{ .key = "xHCI", .value = default },
     .{ .key = "ps2", .value = ignore_all },
-    .{ .key = "keyboard", .value = default },
-    .{ .key = "mouse", .value = default },
+
+    // Devices
+    .{ .key = "aHCI", .value = default },
+    .{ .key = "xHCI", .value = ignore_all },
+    .{ .key = "keyboard", .value = ignore_all },
+    .{ .key = "mouse", .value = ignore_all },
 
     // Allocations
     .{ .key = "Alloc", .value = ignore_all },
