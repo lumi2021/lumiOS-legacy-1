@@ -39,10 +39,10 @@ pub fn init(fb: bootInfo.FrameBuffer) void {
     canvasPPS = fb.size / 4 / fb.height;
     canvasBPP = @intCast((fb.size * 8) / (fb.width * fb.height));
 
-    canvasPixelWidth = fb.width;
-    canvasPixelHeight = fb.height;
     canvasCharWidth = @divTrunc(fb.width, system_font_width);
     canvasCharHeight = @divTrunc(fb.height, system_font_height);
+    canvasPixelWidth = canvasCharWidth * system_font_width;
+    canvasPixelHeight = canvasCharHeight * system_font_height;
 
     cursor.pos_x = 0;
     cursor.pos_y = 0;
