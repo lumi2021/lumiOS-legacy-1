@@ -50,7 +50,7 @@ pub fn init(memmap: []*MemMapEntry) !void {
     st.pop();
 }
 
-const write_allocator = os.console_write("Alloc");
+const write_allocator = os.console_write("alloc");
 pub const allocator = struct {
     vtab: std.mem.Allocator.VTable = .{ .alloc = alloc, .resize = resize, .remap = remap, .free = free },
 

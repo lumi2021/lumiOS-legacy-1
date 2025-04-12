@@ -13,7 +13,9 @@ pub const FsNodeList = std.ArrayList(*FsNode);
 
 pub const FsNode = struct {
     name: []u8,
-    parent: *FsNode,
+
+    parent: ?*FsNode,
+
     children: FsNodeList,
     permissions: struct {
         read: bool,
@@ -25,7 +27,7 @@ pub const FsNode = struct {
     pub fn init(name: []const u8, data: FsNodeData) *@This() {
         st.push(@src()); defer st.pop();
         
-        const alloc = os.memory.allocator;
+        const alloc = fs.allocator;
     
         const this = alloc.create(FsNode) catch unreachable;
         this.name = alloc.alloc(u8, name.len) catch unreachable;
@@ -35,12 +37,22 @@ pub const FsNode = struct {
         
         return this;
     }
+    
     pub fn deinit(this: *@This()) void {
-        const alloc = os.memory.allocator;
+        const alloc = fs.allocator;
 
-        alloc.free(this.name);
+        // Deinit children
+        for (this.children.items) |e| e.deinit();
         this.children.deinit();
+
+        // free heap data
+        alloc.free(this.name);
         alloc.free(this);
+    }
+    pub fn deinit_children(this: *@This()) void {
+        _ = this;
+        // TODO
+        //
     }
 
     pub inline fn kind(s: *@This()) ResourceKind {
@@ -50,8 +62,14 @@ pub const FsNode = struct {
     pub fn branch(this: *@This(), name: []const u8, data: FsNodeData) *@This() {
         st.push(@src()); defer st.pop();
 
+        // Create new instance
         const new = FsNode.init(name, data);
+        // Add as child
         this.children.append(new) catch unreachable;
+
+        // Set child's parent data
+        new.parent = this;
+
         return new;
     }
 

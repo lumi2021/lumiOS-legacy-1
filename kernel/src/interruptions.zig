@@ -2,7 +2,7 @@ const os = @import("root").os;
 const st = os.stack_tracer;
 
 const interrupts = &os.system.interrupt_manager.interrupts;
-const write = os.console_write("Interrupt");
+const write = os.console_write("interrupt");
 
 const InterruptFrame = os.theading.TaskContext;
 

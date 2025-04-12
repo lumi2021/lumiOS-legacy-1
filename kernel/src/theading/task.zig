@@ -10,7 +10,7 @@ const st = os.stack_tracer;
 const ResourceHandler = os.system.ResourceHandler;
 const Pipe = os.theading.task_resources.Pipe;
 
-const PipeMap = std.StringHashMap(Pipe);
+const PipeMap = std.StringHashMap(*Pipe);
 
 const guard_size = os.theading.stack_guard_size;
 const map_size = os.theading.task_stack_size;
@@ -48,10 +48,11 @@ pub const Task = struct {
         ptr.taskAllocator = std.heap.ArenaAllocator.init(os.memory.allocator);
         // Create resources list
         ptr.resources = ptr.taskAllocator.allocator().alloc(ResourceHandler, 0x40) catch unreachable;
-        // Create stdio pipe
-        ptr.stdio = Pipe.init("stdio");
         // Create pipe map
         ptr.pipes = PipeMap.init(ptr.taskAllocator.allocator());
+
+        // Create stdio pipe
+        ptr.stdio = ptr.create_pipe("stdio");
 
         { // stack trace config
             ptr.stack_trace_count = 3;
@@ -80,6 +81,11 @@ pub const Task = struct {
         errdefer allocator.free(self.stack);
 
         self.stack_pointer = @intFromPtr(&self.stack) + total_size;
+    }
+    pub fn create_pipe(self: *@This(), name: []const u8) *Pipe {
+        const new_pipe = Pipe.init(self.taskAllocator.allocator(), name);
+        self.pipes.put(name, new_pipe) catch unreachable;
+        return new_pipe;
     }
 
     pub fn get_resource_index(self: *@This()) !usize {

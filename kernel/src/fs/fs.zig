@@ -16,7 +16,7 @@ pub const FileAccessFlags = packed struct(u64) {
 };
 
 var arena: std.heap.ArenaAllocator = undefined;
-var allocator: std.mem.Allocator = undefined;
+pub var allocator: std.mem.Allocator = undefined;
 var fileTree: struct {
 
     drives: []?*FsNode,
@@ -109,6 +109,7 @@ pub fn reset_drive(slot: usize) void {
 
     write.dbg("reseting drive {c} data...", .{letter});
 
+    drive.deinit_children();
     part.scan_partitions(drive.data.disk);
 
     write.dbg("driver {c} reseted!", .{letter});

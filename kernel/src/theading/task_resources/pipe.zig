@@ -12,15 +12,16 @@ pub const Pipe = struct {
     pub const PipeBuffer = std.fifo.LinearFifo([]u8, .Dynamic);
 
     name: []u8,
+    allocator: std.mem.Allocator,
     buffer: PipeBuffer,
 
-    pub fn init(name: []const u8) *@This() {
-        const alloc = os.memory.allocator;
-        var this = alloc.create(Pipe) catch unreachable;
+    pub fn init(allocator: std.mem.Allocator, name: []const u8) *@This() {
+        var this = allocator.create(Pipe) catch unreachable;
 
-        this.name = alloc.alloc(u8, name.len) catch unreachable;
+        this.allocator = allocator;
+        this.name = allocator.alloc(u8, name.len) catch unreachable;
         this.name = @constCast(name);
-        this.buffer = PipeBuffer.init(alloc);
+        this.buffer = PipeBuffer.init(allocator);
 
         return this;
     }
