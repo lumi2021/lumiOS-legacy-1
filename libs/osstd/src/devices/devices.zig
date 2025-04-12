@@ -1,0 +1,1 @@
+pub const mouse = @import("mouse/mouse.zig");

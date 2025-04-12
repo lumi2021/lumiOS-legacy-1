@@ -44,10 +44,10 @@ const ResourceHandlerData = union(ResourceHandler.Kind) {
 
 pub const ResourceHandlerData_Device = struct {};
 pub const ResourceHandlerData_Pipe = struct {
-    pipePtr: *os.theading.Pipe
+    pipePtr: *os.theading.task_resources.Pipe
 };
 pub const ResourceHandlerData_SharedPipe = struct {
-    pipePtr: *os.theading.Pipe,
+    pipePtr: *os.theading.task_resources.Pipe,
     bufferIdx: usize
 };
 

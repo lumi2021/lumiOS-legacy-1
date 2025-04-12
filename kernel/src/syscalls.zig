@@ -88,7 +88,7 @@ fn print_stdout(_: *TaskContext, message: usize, _: usize, _: usize, _: usize) S
     const str_buf: [*:0]u8 = @ptrFromInt(message);
     const str: [:0]u8 = std.mem.span(str_buf);
 
-    print.raw("[{s} ({X:0>5})] {s}\n", .{os.theading.schedue.current_task.?.name, os.theading.schedue.current_task.?.id, str});
+    print.raw("[{s} ({X:0>5})] {s}", .{os.theading.schedue.current_task.?.name, os.theading.schedue.current_task.?.id, str});
 
     return 0;
 }

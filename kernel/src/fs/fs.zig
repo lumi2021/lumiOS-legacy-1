@@ -1,5 +1,6 @@
 // File system:
-//     <letter>:/      - default partitions
+//     <letter>:/      - drivers
+//      '- <name>/     - partitions
 //     sys:/           - virtual system directories
 //      '_ proc/       - processes
 //          |- self    - caller process dir
@@ -42,6 +43,9 @@ pub fn init() !void {
         }
     }
     fileTree.dev = FsNode.init("dev:", .{ .virtual_directory = undefined }); {
+        // Mouse, keyboard and textscan are basic input
+        // features, so they aways exists in the file system
+        // even if there's no device to input to them
         _ = fileTree.dev.branch("keyboard", .{ .sharedPipe = undefined });
         _ = fileTree.dev.branch("mouse", .{ .sharedPipe = undefined });
         _ = fileTree.dev.branch("textscan", .{ .sharedPipe = undefined });
@@ -211,7 +215,7 @@ pub fn read_file_descriptor(task: *Task, descriptor: usize, buffer: []u8, pos: u
     }
 }
 
-fn solve_path(path: []const u8) OpenPathError!*FsNode {
+pub fn solve_path(path: []const u8) OpenPathError!*FsNode {
     st.push(@src()); defer st.pop();
 
     var iter = std.mem.tokenizeAny(u8, path, "/");
@@ -269,6 +273,7 @@ fn get_tree_root(token: []const u8) OpenPathError!*FsNode {
 // imports
 const std = @import("std");
 const os = @import("root").os;
+const osstd = @import("osstd");
 const schedue = os.theading.schedue;
 
 const Task = os.theading.Task;

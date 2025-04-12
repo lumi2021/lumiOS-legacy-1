@@ -85,7 +85,7 @@ pub const DiskPartition = struct {
 };
 
 pub const FsNodePipe = struct {
-    pipePtr: *os.theading.Pipe
+    pipePtr: *os.theading.task_resources.Pipe
 };
 pub const FsNodeSymlink = struct {
     linkTo: []const u8

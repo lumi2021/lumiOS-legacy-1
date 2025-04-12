@@ -2,6 +2,7 @@ pub const SystemCall = @import("enums/SystemCall.zig").SystemCall;
 pub const ErrorCode = @import("enums/ErrorCode.zig").ErrorCode;
 
 pub const fs = @import("fs/fs.zig");
+pub const devices = @import("devices/devices.zig");
 
 pub const process = @import("process/process.zig");
 pub const debug = @import("debug/debug.zig");

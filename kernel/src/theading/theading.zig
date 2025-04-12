@@ -3,8 +3,9 @@ const os = @import("root").os;
 pub const taskManager = @import("taskManager.zig");
 pub const schedue = @import("schedue.zig");
 
+pub const task_resources = @import("task_resources/tasks_resources.zig");
+
 pub const Task = @import("task.zig").Task;
-pub const Pipe = @import("pipe.zig").Pipe;
 pub const TaskContext = os.system.theading_task_context.TaskContext;
 
 pub const run_process = taskManager.run_process;

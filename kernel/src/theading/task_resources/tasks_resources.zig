@@ -1,0 +1,1 @@
+pub const Pipe = @import("pipe.zig").Pipe;

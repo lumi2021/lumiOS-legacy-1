@@ -8,7 +8,7 @@ const write = os.console_write("Task");
 const st = os.stack_tracer;
 
 const ResourceHandler = os.system.ResourceHandler;
-const Pipe = os.theading.Pipe;
+const Pipe = os.theading.task_resources.Pipe;
 
 const PipeMap = std.StringHashMap(Pipe);
 
