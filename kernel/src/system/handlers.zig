@@ -15,9 +15,12 @@ pub const ResourceHandler = struct {
         device,
         disk,
 
-        // virtual shit
+        // data shit
+        partition,
         file,
         directory,
+
+        // virtual shit
         virtual_directory,
         symlink,
         pipe,
@@ -29,8 +32,10 @@ const ResourceHandlerData = union(ResourceHandler.Kind) {
     device: ResourceHandlerData_Device,
     disk: void,
 
+    partition: void,
     file: ResourceHandlerData_File,
     directory: void,
+    
     virtual_directory: void,
     symlink: void,
     pipe: ResourceHandlerData_Pipe,

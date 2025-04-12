@@ -2,6 +2,7 @@ const os = @import("root").os;
 const std = @import("std");
 
 const disk = os.drivers.disk;
+const fs = os.fs;
 
 const ResourceHandler = os.system.ResourceHandler;
 const ResourceKind = ResourceHandler.Kind;
@@ -67,6 +68,7 @@ pub const FsNode = struct {
 pub const FsNodeData = union(ResourceKind) {
     device: void,
     disk: disk.DiskEntry,
+    partition: DiskPartition,
 
     file: void,
     directory: void,
@@ -74,6 +76,12 @@ pub const FsNodeData = union(ResourceKind) {
     symlink: FsNodeSymlink,
     pipe: FsNodePipe,
     sharedPipe: FsNodePipe,
+};
+
+pub const DiskPartition = struct {
+    sectors_start: u32,
+    sectors_end: u32,
+    part_type: fs.partitions.PartitionType
 };
 
 pub const FsNodePipe = struct {

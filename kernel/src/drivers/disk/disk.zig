@@ -50,10 +50,10 @@ pub fn mount_disk(index: usize) void {
 
 pub const register_AHCI_drive = ahci.init_device;
 
-pub fn read(disk: DiskEntry, addr: u64, buffer: []u8) void {
+pub fn read(disk: DiskEntry, sector: u64, buffer: []u8) void {
     switch (disk.data.*) {
         .unitialized => @panic("Trying to read unitialized disk"),
-        .ahci => |d| ahci.read(d, addr, buffer) catch undefined
+        .ahci => |d| ahci.read(d, sector, buffer) catch undefined
     }
 }
 

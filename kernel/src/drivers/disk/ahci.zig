@@ -45,7 +45,6 @@ pub fn read(device: AHCIDeviceEntry, sector: u64, buffer: []u8) !void {
     const total_prdt_size = @sizeOf(HBACMDTable) + (cmdheader.prdtl - 1) * @sizeOf(HBAPRDTEntry);
     @memset(@as([*]u8, @ptrCast(cmdtbl))[0..total_prdt_size], 0);
 
-
     for (0 .. cmdheader.prdtl - 1) |i| {
         const phys_buf = mem.paddr_from_vaddr(@intFromPtr(buf.ptr));
         cmdtbl.prdt_entry(i).dba =  @intCast(phys_buf & 0xFFFFFFFF);

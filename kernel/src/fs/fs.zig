@@ -74,7 +74,12 @@ fn lsRecursiveWithLevel(node: ?*FsNode, level: usize) void {
     if (node == null) return;
 
     for (0..level) |_| write.raw("  ", .{});
-    if (node.?.kind() == .directory or node.?.kind() == .virtual_directory)
+    if (
+        node.?.kind() == .directory
+        or node.?.kind() == .virtual_directory
+        or node.?.kind() == .disk
+        or node.?.kind() == .partition
+    )
         write.raw("{s}/\r\n", .{node.?.name})
     else
         write.raw("{s}\r\n", .{node.?.name});
@@ -88,6 +93,9 @@ pub fn append_disk_drive(disk_entry: disk.DiskEntry) void {
     const drive_name: [2]u8 = .{('A' + @as(u8, @intCast(disk_entry.index))), ':'};
     fileTree.drives[disk_entry.index] = FsNode.init(&drive_name, .{ .disk = disk_entry });
 }
+pub fn get_drive_node(id: usize) *FsNode {
+    return fileTree.drives[id] orelse @panic("Unitialized driver");
+}
 pub fn reset_drive(slot: usize) void {
     st.push(@src()); defer st.pop();
     
@@ -97,19 +105,7 @@ pub fn reset_drive(slot: usize) void {
 
     write.dbg("reseting drive {c} data...", .{letter});
 
-    var sector: [512]u8 = undefined;
-    disk.read(drive.data.disk, 0, &sector);
-
-    for (0..32) |y| {
-        for (0..16) |x| {
-            write.raw("{X:0>2} ", .{sector[x + y * 16]});
-        }
-        write.raw("\n", .{});
-    }
-
-    if (sector[0x1FE] == 0x55 and sector[0x1FF] == 0xAA) {
-        write.dbg("Sector is MBR", .{});
-    }
+    part.scan_partitions(drive.data.disk);
 
     write.dbg("driver {c} reseted!", .{letter});
 }
@@ -278,14 +274,16 @@ const schedue = os.theading.schedue;
 const Task = os.theading.Task;
 const ResourceHandler = os.system.ResourceHandler;
 
-const drives = @import("drives.zig");
-const FAT = @import("formats/FAT.zig");
+const part = @import("partitions/partitions.zig");
 
 const disk = os.drivers.disk;
 const  ahci = disk.ahci;
 
 const write = os.console_write("fs");
 const st = os.stack_tracer;
+
+pub const partitions = @import("partitions/partitions.zig");
+pub const format = @import("formats/formats.zig");
 
 pub const FsNode = @import("fsnode.zig").FsNode;
 pub const FsNodeList = @import("fsnode.zig").FsNodeList;

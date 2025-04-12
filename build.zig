@@ -35,7 +35,6 @@ pub fn build(b: *Build) void {
         "-no-emul-boot",
         "-boot-load-size", "4",
         "-boot-info-table",
-        "-hfsplus",
         "-apm-block-size", "2048",
 
         "--efi-boot", "boot/limine/limine-uefi-cd.bin",
@@ -58,7 +57,7 @@ pub fn build(b: *Build) void {
         "-M", "q35",
         //"-bios", "deps/debug/OVMF.fd", // for UEFI emulation (not recommended)
         "-m", "512M",
-        //"-enable-kvm",
+        "-enable-kvm",
 
         // serial, video, etc
         "-serial", "file:serial.txt",
