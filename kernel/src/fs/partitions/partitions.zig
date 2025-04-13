@@ -8,9 +8,12 @@ const print = os.console_write("partitions");
 const st = os.stack_tracer;
 
 pub fn scan_partitions(driver: disk.DiskEntry) void {
+    st.push(@src()); defer st.pop();
 
     var sector: [512]u8 = undefined;
+    print.dbg("Reading drive sector 0...", .{});
     disk.read(driver, 0, &sector);
+    print.dbg("drive sector 0 read finished!", .{});
 
     if (sector[0x1FE] != 0x55 or sector[0x1FF] != 0xAA) return;
 

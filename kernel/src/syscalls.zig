@@ -19,7 +19,7 @@ const SyscallReturn = anyerror!usize;
 var syscalls: [255]SyscallVector = undefined;
 
 pub fn init() !void {
-    idtm.interrupts[0x80] = syscall_interrupt;
+    st.push(@src()); defer st.pop();
 
     inline for (0..255) |i| syscalls[i] = unhandled_syscall;
 
@@ -32,21 +32,17 @@ pub fn init() !void {
     syscalls[0x05] = read;
 
     syscalls[0x06] = branch_subprocess;
+
+    idtm.interrupts[0x80] = syscall_interrupt;
 }
 
 pub fn syscall_interrupt(context: *TaskContext) void {
-    st.push(@src()); defer st.pop();
+    st.push(@src());
+    defer st.pop();
 
     print.dbg("System call 0x{X} requested!", .{context.rax});
 
-    const res = syscalls[context.rax](
-        context,
-        context.rdi,
-        context.rsi,
-        context.rdx,
-        context.r10
-    )
-    catch |err| {
+    const res = syscalls[context.rax](context, context.rdi, context.rsi, context.rdx, context.r10) catch |err| {
         context.rbx = @intFromEnum(error_to_enum(err));
         return;
     };
@@ -58,18 +54,18 @@ pub fn syscall_interrupt(context: *TaskContext) void {
 }
 fn error_to_enum(err: anyerror) ErrorCode {
     return switch (err) {
-        error.outOfMemory =>        .OutOfMemory,
-        error.pathNotFound =>       .PathNotFound,
-        error.fileNotFound =>       .FileNotFound,
-        error.accessDenied =>       .AccessDenied,
-        error.invalidDescriptor =>  .InvalidDescriptor,
-        error.notAFile =>           .NotAFile,
-        error.invalidPath =>        .InvalidPath,
+        error.outOfMemory => .OutOfMemory,
+        error.pathNotFound => .PathNotFound,
+        error.fileNotFound => .FileNotFound,
+        error.accessDenied => .AccessDenied,
+        error.invalidDescriptor => .InvalidDescriptor,
+        error.notAFile => .NotAFile,
+        error.invalidPath => .InvalidPath,
 
         else => {
             print.warn("unhandled error: {s}", .{@errorName(err)});
             return .Undefined;
-        }
+        },
     };
 }
 
@@ -77,7 +73,6 @@ fn unhandled_syscall(ctx: *TaskContext, _: usize, _: usize, _: usize, _: usize) 
     print.err("Invalid system call {X:0>2}", .{ctx.rax});
     return 0;
 }
-
 
 fn suicide(_: *TaskContext, a: usize, _: usize, _: usize, _: usize) SyscallReturn {
     schedue.kill_current_process(@bitCast(a));
@@ -88,12 +83,8 @@ fn print_stdout(_: *TaskContext, message: usize, _: usize, _: usize, _: usize) S
     const str_buf: [*:0]u8 = @ptrFromInt(message);
     const str: [:0]u8 = std.mem.span(str_buf);
 
-    if (!print.isModeEnabled(.Log)) {
-        print.raw("[{s} ({X:0>5})] {s}", .{
-            os.theading.schedue.current_task.?.name,
-            os.theading.schedue.current_task.?.id,
-            str
-        });
+    if (print.isModeEnabled(.Log)) {
+        print.raw("[{s} ({X:0>5})] {s}", .{ os.theading.schedue.current_task.?.name, os.theading.schedue.current_task.?.id, str });
     }
 
     return 0;
@@ -115,7 +106,7 @@ fn close_file_descriptor(_: *TaskContext, handler: usize, _: usize, _: usize, _:
     return 0;
 }
 fn write(_: *TaskContext, handler: usize, buffer: usize, length: usize, pos: usize) SyscallReturn {
-        const buf = @as([*]u8, @ptrFromInt(buffer))[0..length];
+    const buf = @as([*]u8, @ptrFromInt(buffer))[0..length];
     try fs.write_file_descriptor(schedue.current_task.?, handler, buf, pos);
 
     return 0;
@@ -135,10 +126,6 @@ fn branch_subprocess(_: *TaskContext, process_name: usize, entry_point: usize, a
 
     const pargs: ?*anyopaque = @ptrFromInt(args);
 
-    const pid = taskman.run_process(
-        pname,
-        @ptrFromInt(entry_point),
-        pargs, args_len
-    ) catch unreachable;
+    const pid = taskman.run_process(pname, @ptrFromInt(entry_point), pargs, args_len) catch unreachable;
     return pid;
 }

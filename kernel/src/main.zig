@@ -20,16 +20,15 @@ pub fn main(binfo: BootInfo) noreturn {
     st.push(@src());
 
     boot_info = binfo;
-
-    os.uart.uart_initialize();
     write.raw("Hello, World from {s}!\n", .{@tagName(os.system.arch)});
+    sys.sys_flags.clear_interrupt();
 
     write.log("# Starting setup routine...", .{});
-    sys.sys_flags.clear_interrupt();
+    // This routine will:
+    //  - Settup GDT;
+    //  - Settup memory maps;
+    //  - Settup GP allocator
     kernel_setup();
-    
-    write.log("# Creating debug log history...", .{});
-    try os.debug_log.create_history();
 
     write.log("# Starting system calls...", .{});
     try os.syscalls.init();
@@ -46,12 +45,11 @@ pub fn main(binfo: BootInfo) noreturn {
 
         const width = std.mem.readInt(u32, wpp[4..8], .big);
         const height = std.mem.readInt(u32, wpp[8..12], .big);
-        
+
         const pixels: [*]os.gl.Pixel = @ptrCast(@alignCast(@constCast(wpp[16..].ptr)));
 
         for (0..screenbuf.width) |x| {
             for (0..screenbuf.height) |y| {
-
                 const percent_x: f32 = @as(f32, @floatFromInt(x)) / @as(f32, @floatFromInt(screenbuf.width));
                 const percent_y: f32 = @as(f32, @floatFromInt(y)) / @as(f32, @floatFromInt(screenbuf.height));
                 const uv_x: usize = @intFromFloat(percent_x * width);
@@ -63,29 +61,24 @@ pub fn main(binfo: BootInfo) noreturn {
             }
         }
 
-        //const centerX = (os.GL.canvasWidth / 2 - (36 * 7) / 2);
-        //const centerY = (os.GL.canvasHeight / 2 - 80 / 2);
-        //const centerX2 = (os.GL.canvasWidth / 2 - (8 * 7) / 2);
-        //const centerY2 = (os.GL.canvasHeight / 2 - 16 / 2);
-
-        //os.GL.text.drawBigString("LUMI OS", centerX, centerY);
-        //os.GL.text.drawString(" 0.1.0 ", centerX2, centerY2 + 40);
-
         os.gl.swap_buffer(win_0);
     }
 
-    write.log("# Starting file systems...", .{});
+    write.log("# Creating debug log history...", .{});
+    try os.debug_log.create_history();
+
+    write.log("# Starting file system...", .{});
     try os.fs.init();
 
     write.log("# Starting drivers...", .{});
     os.drivers.init_all_drivers() catch |err| @panic(@errorName(err));
 
-    write.log("# Starting initialization programs...", .{});
+    write.log("# Starting Adam thead...", .{});
     {
         _ = os.theading.run_process(@constCast("Adam"), sysprocs.adam.init, null, 0) catch @panic("Cannot initialize Adam");
     }
 
-    os.fs.lsrecursive();
+    //os.fs.lsrecursive();
 
     write.log("# Starting schedue...", .{});
     setup_pic();
@@ -123,8 +116,7 @@ fn kernel_setup() void {
 }
 
 fn setup_pic() void {
-    st.push(@src());
-    defer st.pop();
+    st.push(@src()); defer st.pop();
 
     io.outb(0x20, 0x11); // Send 0x11 (ICW1) to master PIC (port 0x20)
     io.outb(0xA0, 0x11); // Send 0x11 (ICW1) to slave  PIC (port 0xA0)
@@ -141,10 +133,8 @@ fn setup_pic() void {
     io.outb(0x21, 0x00); // Enables all interrupts from master PIC
     io.outb(0xA1, 0x00); // Enables all interrupts from slave  PIC
 }
-
 fn setup_timer() void {
-    st.push(@src());
-    defer st.pop();
+    st.push(@src()); defer st.pop();
 
     const frquency = 20;
     const divisor: u16 = 1193182 / frquency;

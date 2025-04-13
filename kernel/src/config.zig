@@ -16,8 +16,8 @@ pub const debug_ignore: []const KeyValuePair = &[_]KeyValuePair{
 
     // threading
     .{ .key = "schedue", .value = ignore_all },
-    .{ .key = "taskman", .value = default },
-    .{ .key = "task", .value = default },
+    .{ .key = "taskman", .value = ignore_all },
+    .{ .key = "task", .value = ignore_all },
 
     // interruptions
     .{ .key = "IDTM", .value = ignore_all },
@@ -26,11 +26,11 @@ pub const debug_ignore: []const KeyValuePair = &[_]KeyValuePair{
 
     // file system
     .{ .key = "fs", .value = default },
-    .{ .key = "partitions", .value = ignore_dbg },
+    .{ .key = "partitions", .value = default },
 
     // Drivers related
     .{ .key = "drivers", .value = ignore_all },
-    .{ .key = "PCI", .value = default },
+    .{ .key = "PCI", .value = ignore_all },
     .{ .key = "ps2", .value = ignore_all },
 
     // Devices
