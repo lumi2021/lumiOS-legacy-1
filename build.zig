@@ -39,6 +39,7 @@ pub fn build(b: *Build) void {
 
         "--efi-boot", "boot/limine/limine-uefi-cd.bin",
 
+        "-V", "lumiOS",
         "-efi-boot-part",
         "--efi-boot-image",
         "--protective-msdos-label",
@@ -51,13 +52,14 @@ pub fn build(b: *Build) void {
         "bios-install",
         "zig-out/lumiOS.iso"
     });
-    const run_cmd = b.addSystemCommand(&.{
+    
+    const run_qemu = b.addSystemCommand(&.{
         "qemu-system-x86_64",
         
         "-M", "q35",
         //"-bios", "deps/debug/OVMF.fd", // for UEFI emulation (not recommended)
         "-m", "512M",
-        "-enable-kvm",
+        //"-enable-kvm",
 
         // serial, video, etc
         "-serial", "file:serial.txt",
@@ -82,6 +84,7 @@ pub fn build(b: *Build) void {
         "-drive", "id=drive0,file=zig-out/lumiOS.iso,format=raw,if=none",
         "-boot", "order=c"
     });
+    //const run_bochs = b.addSystemCommand(&.{"bochs", "-f", "bochsrc.txt"});
 
     geneate_img_cmd.step.dependOn(install_bootloadr_step);
     geneate_img_cmd.step.dependOn(&install_kernel_step.step);
@@ -90,9 +93,9 @@ pub fn build(b: *Build) void {
     // default (only build)
     b.getInstallStep().dependOn(&limine_bios_install.step);
 
-    run_cmd.step.dependOn(b.getInstallStep());
+    run_qemu.step.dependOn(b.getInstallStep());
 
     // build and run
     const run_step = b.step("run", "Run the OS in qemu");
-    run_step.dependOn(&run_cmd.step);
+    run_step.dependOn(&run_qemu.step);
 }

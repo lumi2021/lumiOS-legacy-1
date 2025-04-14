@@ -87,11 +87,17 @@ pub fn read(device: AHCIDeviceEntry, sector: u64, buffer: []u8) !void {
 
     port.ci = std.math.shl(u32, 1, slot);
 
-    while (true) {
+    write.dbg("Waiting for operation...", .{});
+    var timeout: usize = 0;
+    while (true) : (timeout += 1) {
         if ((port.ci & std.math.shl(u32, 1, slot)) == 0) break;
+        if (timeout >= (1 << 32)) {
+            write.err("Timeout", .{});
+            return error.timeout;
+        }
         if ((port.is & (1 << 30)) != 0) {
             write.err("Read disk error", .{});
-            return error.readError;
+            return error.readDiskError;
         }
     }
 }
