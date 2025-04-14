@@ -11,8 +11,8 @@ pub var canvasCharWidth: usize = 0;
 pub var canvasCharHeight: usize = 0;
 
 var system_font: Font = undefined;
-var system_font_width: usize = undefined;
-var system_font_height: usize = undefined;
+pub var system_font_width: usize = undefined;
+pub var system_font_height: usize = undefined;
 
 pub var ready = false;
 
@@ -22,8 +22,16 @@ var arena: std.heap.ArenaAllocator = undefined;
 var allocator: Allocator = undefined;
 
 pub var window_list: []?*Win = undefined;
-var cursor: struct { pos_x: isize, pos_y: isize } = undefined;
-var cursor_texture: []const u8 = undefined;
+var cursor: struct {
+    pos_x: isize,
+    pos_y: isize,
+
+    old_pos_x: isize,
+    old_pos_y: isize,
+
+    mode: usize
+} = undefined;
+var cursor_texture: []Pixel = undefined;
 
 pub fn init(fb: bootInfo.FrameBuffer) void {
     st.push(@src()); defer st.pop();
@@ -44,9 +52,10 @@ pub fn init(fb: bootInfo.FrameBuffer) void {
     canvasPixelWidth = canvasCharWidth * system_font_width;
     canvasPixelHeight = canvasCharHeight * system_font_height;
 
-    cursor.pos_x = 0;
-    cursor.pos_y = 0;
-    cursor_texture = assets.cursors[0][16..];
+    cursor.pos_x = 0; cursor.pos_y = 0;
+    cursor.old_pos_x = 0; cursor.old_pos_y = 0;
+    cursor.mode = 0;
+    cursor_texture = @as([*]Pixel, @ptrCast(@alignCast(@constCast(&assets.cursors[0][16]))))[0.. (256 * 256)];
 
     // setting up arena allocator
     arena = std.heap.ArenaAllocator.init(os.memory.allocator);
@@ -138,7 +147,8 @@ pub fn swap_buffer(ctx: usize) void {
             win.position_x - 1,
             win.position_y - 1,
             win.position_x + @as(isize, @bitCast(win.charWidth)) + 1,
-            win.position_y + @as(isize, @bitCast(win.charHeight)) + 1
+            win.position_y + @as(isize, @bitCast(win.charHeight)) + 1,
+            true
         );
     }
 }
@@ -171,7 +181,7 @@ pub fn focus_window(ctx: usize) void {
 }
 
 var show_z = false;
-pub fn redraw_screen_region(rx: isize, ry: isize, rw: isize, rh: isize) void {
+pub fn redraw_screen_region(rx: isize, ry: isize, rw: isize, rh: isize, update_cursor: bool) void {
     st.push(@src()); defer st.pop();
 
     const rrx = @max(rx, 0);
@@ -231,41 +241,47 @@ pub fn redraw_screen_region(rx: isize, ry: isize, rw: isize, rh: isize) void {
         }
     }
 
-    redraw_cursor();
+    if (update_cursor) redraw_cursor();
+}
+pub fn set_cursor_mode(mode: usize) void {
+    cursor.mode = mode;
 }
 pub fn move_cursor(posx: isize, posy: isize) void {
     st.push(@src()); defer st.pop();
 
-    const px = @divFloor(cursor.pos_x, @as(isize, @bitCast(system_font_width)));
-    const py = @divFloor(cursor.pos_y, @as(isize, @bitCast(system_font_height)));
-
     cursor.pos_x = posx;
     cursor.pos_y = posy;
-
-    redraw_screen_region(px - 3, py - 3, 6, 6);
 }
 pub fn redraw_cursor() void {
     st.push(@src()); defer st.pop();
+
+    // Clearing old cursor sprite
+    const opx = @divFloor(cursor.old_pos_x, @as(isize, @bitCast(system_font_width)));
+    const opy = @divFloor(cursor.old_pos_y, @as(isize, @bitCast(system_font_height)));
+    redraw_screen_region(opx - 3, opy - 3, 6, 6, false);
+
+    const mode_x = cursor.mode % 8;
+    const mode_y = cursor.mode / 8;
 
     for (0 .. 32) |x| {
         for (0 .. 32) |y| {
 
             const rcpx = cursor.pos_x + @as(isize, @bitCast(x)) - 16;
             const rcpy = cursor.pos_y + @as(isize, @bitCast(y)) - 16;
-            const tbase = (x + y * 128) * 4;
+            const col = cursor_texture[(mode_x * 32 + mode_y * 32 * 256) + (x + y * 256)];
 
             if (rcpx < 0 or rcpx >= canvasPixelWidth or rcpy < 0 or rcpy >= canvasPixelHeight) continue;
-
-            if (cursor_texture[tbase + 3] > 128) {
-                root_framebuffer[@as(usize, @intCast(rcpx)) + @as(usize, @intCast(rcpy)) * canvasPPS] = .rgb(
-                    cursor_texture[tbase + 2],
-                    cursor_texture[tbase + 1],
-                    cursor_texture[tbase + 0]
-                );
+            
+            if (col.alpha > 128) {
+                root_framebuffer[@as(usize, @intCast(rcpx)) + @as(usize, @intCast(rcpy)) * canvasPPS] = .rgb(col.blue, col.green, col.red);
             }
 
         }
     }
+
+    // saving last drawn position
+    cursor.old_pos_x = cursor.pos_x;
+    cursor.old_pos_y = cursor.pos_y;
 }
 fn root_draw_char(c: u8, posX: usize, posY: usize) void {
     st.push(@src()); defer st.pop();

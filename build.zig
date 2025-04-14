@@ -72,7 +72,7 @@ pub fn build(b: *Build) void {
         "-device", "ahci,id=ahci",
         "-device", "ide-hd,drive=drive0,bus=ahci.0",
 
-        "-usb",
+        //"-usb",
         "-device", "qemu-xhci,id=usb",
         //"-device", "usb-mouse",
         //"-device", "usb-kbd",

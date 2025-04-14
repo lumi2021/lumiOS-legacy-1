@@ -30,13 +30,19 @@ export fn __boot_entry__() callconv(.C) noreturn {
     const addr = kernel_addr_request.response.?;
     const hhdr = hhdm_request.response.?;
 
-    const boot_info = BootInfo{ .kernel_physical_base = addr.physical_base, .kernel_virtual_base = addr.virtual_base, .hhdm_address_offset = hhdr.offset, .framebuffer = .{
-        .framebuffer = fbuffer.address,
-        .size = fbuffer.pitch * fbuffer.height,
-        .width = fbuffer.width,
-        .height = fbuffer.height,
-        .pixels_per_scan_line = fbuffer.pitch,
-    }, .memory_map = @ptrCast(mmap.entries_ptr[0..mmap.entry_count]) };
+    const boot_info = BootInfo{
+        .kernel_physical_base = addr.physical_base,
+        .kernel_virtual_base = addr.virtual_base,
+        .hhdm_address_offset = hhdr.offset,
+        .framebuffer = .{
+            .framebuffer = fbuffer.address,
+            .size = fbuffer.pitch * fbuffer.height,
+            .width = fbuffer.width,
+            .height = fbuffer.height,
+            .pixels_per_scan_line = fbuffer.pitch,
+        },
+        .memory_map = @ptrCast(mmap.entries_ptr[0..mmap.entry_count]),
+    };
 
     kernel_entry(boot_info);
 }

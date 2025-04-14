@@ -72,11 +72,10 @@ pub const fonts = [_]Font {
 pub const wallpapers = [_][]const u8 {
     @embedFile("wallpapers/dog.bm"),
     @embedFile("wallpapers/city.bm"),
-    @embedFile("wallpapers/boobs.bm"),
-    @embedFile("wallpapers/boobes.bm"),
     @embedFile("wallpapers/lilguy.bm"),
     @embedFile("wallpapers/cat.bm"),
     @embedFile("wallpapers/life.bm"),
+    @embedFile("wallpapers/god.bm"),
 };
 
 pub const cursors = [_][]const u8 {
