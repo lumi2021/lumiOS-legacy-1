@@ -12,7 +12,7 @@ pub const debug_ignore: []const KeyValuePair = &[_]KeyValuePair{
     // memory
     .{ .key = "PMM", .value = default },
     .{ .key = "VMM", .value = default },
-    .{ .key = "Paging", .value = ignore_all },
+    .{ .key = "Paging", .value = default },
 
     // threading
     .{ .key = "schedue", .value = ignore_all },
@@ -35,7 +35,7 @@ pub const debug_ignore: []const KeyValuePair = &[_]KeyValuePair{
 
     // Devices
     .{ .key = "aHCI", .value = default },
-    .{ .key = "xHCI", .value = ignore_all },
+    .{ .key = "xHCI", .value = default },
     .{ .key = "keyboard", .value = ignore_all },
     .{ .key = "mouse", .value = ignore_all },
 

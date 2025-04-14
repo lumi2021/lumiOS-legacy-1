@@ -70,13 +70,13 @@ pub fn main(binfo: BootInfo) noreturn {
     write.log("# Starting file system...", .{});
     try os.fs.init();
 
-    write.log("# Starting drivers...", .{});
-    os.drivers.init_all_drivers() catch |err| @panic(@errorName(err));
-
     write.log("# Starting Adam thead...", .{});
     {
         _ = os.theading.run_process(@constCast("Adam"), sysprocs.adam.init, null, 0) catch @panic("Cannot initialize Adam");
     }
+
+    write.log("# Starting drivers...", .{});
+    os.drivers.init_all_drivers() catch |err| @panic(@errorName(err));
 
     write.log("File system:", .{});
     if (write.isModeEnabled(.Log)) {

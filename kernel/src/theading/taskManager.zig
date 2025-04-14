@@ -29,7 +29,7 @@ pub fn init() void {
     @memset(task_list, null);
 }
 
-pub fn run_process(taskName: [:0]u8, entry: ProcessEntryFunction, args: ?*const anyopaque, argssize: usize) !usize {
+pub fn run_process(taskName: [:0]const u8, entry: ProcessEntryFunction, args: ?*const anyopaque, argssize: usize) !usize {
     st.push(@src()); defer st.pop();
 
     write.dbg("Scheduing task \"{s}\" to be initialized...", .{taskName});

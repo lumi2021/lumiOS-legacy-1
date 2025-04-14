@@ -17,7 +17,7 @@ const map_size = os.theading.task_stack_size;
 const total_size = guard_size + map_size;
 
 pub const Task = struct {
-    name: [:0]u8,
+    name: [:0]const u8,
     id: usize,
     state: TaskState,
     waitingFor: TaskWaitingDetails,
