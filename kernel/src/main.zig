@@ -78,7 +78,12 @@ pub fn main(binfo: BootInfo) noreturn {
         _ = os.theading.run_process(@constCast("Adam"), sysprocs.adam.init, null, 0) catch @panic("Cannot initialize Adam");
     }
 
-    //os.fs.lsrecursive();
+    write.log("File system:", .{});
+    if (write.isModeEnabled(.Log)) {
+        write.raw("----------------------\n", .{});
+        os.fs.lsrecursive();
+        write.raw("----------------------\n", .{});
+    }
 
     write.log("# Starting schedue...", .{});
     setup_pic();
@@ -86,13 +91,13 @@ pub fn main(binfo: BootInfo) noreturn {
 
     st.pop();
     write.log("halting init thread...", .{});
+    os.stack_tracer.enabled = false;
 
     while (true) sys.sys_flags.set_interrupt();
 }
 
 fn kernel_setup() void {
-    st.push(@src());
-    defer st.pop();
+    st.push(@src()); defer st.pop();
 
     errdefer @panic("Error during kernel sutup!");
 

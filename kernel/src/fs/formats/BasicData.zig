@@ -12,6 +12,7 @@ const st = os.stack_tracer;
 const GPTEntry = partitions.GPTEntry;
 
 pub fn detect_partition_type(driver: disk.DiskEntry, entry: GPTEntry) PartitionType {
+    st.push(@src()); defer st.pop();
 
     print.dbg("loading sector {}", .{entry.first_lba});
 
@@ -19,11 +20,8 @@ pub fn detect_partition_type(driver: disk.DiskEntry, entry: GPTEntry) PartitionT
     disk.read(driver, entry.first_lba, &sector);
 
     if (std.mem.eql(u8, sector[0x1 .. 0x6], "CD001")) {
-        print.log("Partition is CD001!", .{});
         return .iso9660;
-
     } else if (std.mem.eql(u8, sector[0x36 .. 0x3C], "FAT12")) {
-        print.log("Partition is FAT12!", .{});
         return .FAT16;
     }
     

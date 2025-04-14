@@ -8,8 +8,8 @@ const puts = uart.uart_puts;
 const printf = uart.uart_printf;
 const st = os.stack_tracer;
 
-const StringList = std.ArrayList([256]u8);
-pub var history: StringList = undefined;
+const String = std.ArrayList(u8);
+pub var history: String = undefined;
 pub var history_enabled: bool = false;
 var debug_win: usize = undefined;
 
@@ -83,7 +83,7 @@ const Mode = enum(u8) { Log = 0b0001, Error = 0b0010, Debug = 0b0100, Warn = 0b1
 pub fn create_history() !void {
     st.push(@src()); defer st.pop();
     
-    history = StringList.init(os.memory.allocator);
+    history = String.init(os.memory.allocator);
     history_enabled = true;
 
     debug_win = gl.create_window(.text, 50, gl.canvasCharHeight - 10, true);
@@ -96,16 +96,7 @@ pub fn add_to_history(str: []const u8) void {
 
     history_enabled = false;
 
-    var lines = std.mem.splitAny(u8, str, "\n");
-    var line = lines.next();
-
-    while (line != null) : (line = lines.next()) {
-        if (line.?.len == 0) continue;
-
-        const item = history.addOne() catch unreachable;
-        @memset(item, 0);
-        _ = fmt.bufPrint(item, "{s}", .{line.?}) catch unreachable;
-    }
+    _ = history.writer().write(str) catch unreachable;
 
     update_debug_info();
     history_enabled = true;
@@ -136,21 +127,48 @@ fn update_debug_info() void {
 
     for (0..framebuffer_data.width) |x| fb[x + framebuffer_data.width] = .char(196);
 
-    const fbh = framebuffer_data.height - 2;
-    const entries_count = @min(fbh, history.items.len - 1);
-    const entries_start = history.items.len - entries_count;
+    const sidx = getStartIndex(history.items, framebuffer_data.width, framebuffer_data.height - 2);
+    const str = history.items[sidx..];
 
-    var i: usize = 0;
-    while (i < entries_count and i < fbh) : (i += 1) {
-        const l = history.items[entries_start + i];
+    var x: usize = 0;
+    var y: usize = 0;
 
-        for (0..l.len) |x| {
-            if (x >= framebuffer_data.width) break;
-            if (l[x] < 32) continue;
-
-            fb[x + (i + 2) * framebuffer_data.width] = .char(l[x]);
+    for (str) |char| {
+        if (char == '\n') { y += 1; x = 0; }
+        else if (char < 32) continue
+        else {
+            fb[x + (y + 2) * framebuffer_data.width].value = char;
+            x += 1;
+            if (x >= framebuffer_data.width) { x = 0; y += 1; }
         }
     }
 
     gl.swap_buffer(debug_win);
+}
+
+// ChatGPT code idk what exactly it does
+pub fn getStartIndex(s: []const u8, line_width: usize, max_lines: usize) usize {
+    var total_lines: usize = 0;
+    var line_start: usize = s.len;
+    var i: usize = s.len;
+
+    while (i > 0) {
+        i -= 1;
+
+        if (s[i] == '\n' or i == 0) {
+            const real_start = if (s[i] == '\n') i + 1 else i;
+            const line = s[real_start .. line_start];
+
+            const len = line.len;
+            const visuals = (len + line_width - 1) / line_width;
+
+            total_lines += visuals;
+
+            if (total_lines > max_lines) return real_start;
+
+            line_start = i;
+        }
+    }
+
+    return 0;
 }

@@ -87,7 +87,6 @@ pub fn read(device: AHCIDeviceEntry, sector: u64, buffer: []u8) !void {
 
     port.ci = std.math.shl(u32, 1, slot);
 
-    write.dbg("Waiting for operation...", .{});
     var timeout: usize = 0;
     while (true) : (timeout += 1) {
         if ((port.ci & std.math.shl(u32, 1, slot)) == 0) break;

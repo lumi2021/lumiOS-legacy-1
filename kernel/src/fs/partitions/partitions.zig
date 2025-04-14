@@ -40,6 +40,7 @@ pub fn scan_partitions(driver: disk.DiskEntry) void {
 }
 
 fn scan_gpt_table(driver: disk.DiskEntry) void {
+    st.push(@src()); defer st.pop();
 
     var sector: [512]u8 = undefined;
     disk.read(driver, 1, &sector);
@@ -62,25 +63,17 @@ fn scan_gpt_table(driver: disk.DiskEntry) void {
     for (entries) |i| {
         if (i.type_guid.is_zero()) continue;
 
-        _ = std.unicode.utf16LeToUtf8(&buf, &i.name) catch unreachable;
-        print.dbg(\\ name: {s}
-        \\ type guid: {}
-        \\ start: 0x{X}
-        \\ size: {}
-        , .{ std.mem.sliceTo(&buf, 0), i.type_guid, i.first_lba * 512, i.last_lba - i.first_lba });
-
-        var guid_buf: [36]u8 = undefined;
-        _ = std.fmt.bufPrint(&guid_buf, "{}", .{i.type_guid}) catch unreachable;
+        _ = std.fmt.bufPrint(&buf, "{}", .{i.type_guid}) catch unreachable;
 
         var partType: PartitionType = .unitialized;
 
         // Basic Data Partition
-        if (std.mem.eql(u8, &guid_buf, "EBD0A0A2-B9E5-4433-87C0-68B6B72699C7")) {
+        if (std.mem.eql(u8, &buf, "EBD0A0A2-B9E5-4433-87C0-68B6B72699C7")) {
             partType = format.BasicData.detect_partition_type(driver, i);
         }
 
         // EFI Partition
-        else if (std.mem.eql(u8, &guid_buf, "C12A7328-F81F-11D2-BA4B-00A0C93EC93B")) {
+        else if (std.mem.eql(u8, &buf, "C12A7328-F81F-11D2-BA4B-00A0C93EC93B")) {
             partType = format.EFISystem.detect_partition_type(driver, i);
         }
 
@@ -90,14 +83,21 @@ fn scan_gpt_table(driver: disk.DiskEntry) void {
             continue;
         }
 
+        print.log("Partition type is {s}", .{@tagName(partType)});
+
+        // parsing the partition name as ASCII
         _ = std.unicode.utf16LeToUtf8(&buf, &i.name) catch unreachable;
-        _ = drive_node.branch(std.mem.sliceTo(&buf, 0), .{ .partition = .{
+
+        _ = std.unicode.utf16LeToUtf8(&buf, &i.name) catch unreachable;
+        const node = drive_node.branch(std.mem.sliceTo(&buf, 0), .{ .partition = .{
             .part_type = partType,
             .sectors_start = @truncate(i.first_lba),
             .sectors_end = @truncate(i.last_lba)
         }});
 
         switch (partType) {
+            //.FAT12 => format.FAT12.analyze_partition(driver, node, i.first_lba, i.last_lba),
+            .FAT32 => format.FAT32.analyze_partition(driver, node, i.first_lba, i.last_lba),
             else => |t| print.err("Partition type {s} not implemented!", .{@tagName(t)})
         }
 
