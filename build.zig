@@ -59,7 +59,9 @@ pub fn build(b: *Build) void {
         "-M", "q35",
         //"-bios", "deps/debug/OVMF.fd", // for UEFI emulation (not recommended)
         "-m", "512M",
-        "-enable-kvm",
+        "-accel",
+        if (builtin.os.tag == .linux)"kvm"
+        else "whpx",
 
         // serial, video, etc
         "-serial", "file:serial.txt",

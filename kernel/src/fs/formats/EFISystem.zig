@@ -19,47 +19,40 @@ pub fn detect_partition_type(driver: disk.DiskEntry, entry: GPTEntry) PartitionT
 
     const bpb = std.mem.bytesToValue(BPB, &sec_buf);
 
-    const total_sectors: usize = if (bpb.total_sectors_16 != 0) @intCast(bpb.total_sectors_16) else @intCast(bpb.total_sectors_32);
-    const fat_sectors: usize = if (bpb.fat_size_16 != 0) @intCast(bpb.fat_size_16) else @intCast(bpb.fat_size_32);
-    
-    // FIXME overflow happening here
-    const root_dir_sectors = ((bpb.root_entry_count * 32) + (bpb.bytes_per_sector - 1)) / bpb.bytes_per_sector;
-    const data_sectors = total_sectors - (bpb.reserved_sector_count + (bpb.num_fats * fat_sectors) + root_dir_sectors);
-    const count_of_clusters = data_sectors / bpb.sectors_per_cluster;
+    if (bpb.fat_size_16 == 0) return .FAT32;
 
-    if (count_of_clusters < 4085) return .FAT12;
-    if (count_of_clusters < 65525) return .FAT16;
+    const bytes_per_sector:usize = @intCast(bpb.bytes_per_sector);
+    const total_sectors: usize = if (bpb.num_sectors_16 != 0) @intCast(bpb.num_sectors_16) else @intCast(bpb.num_sectors_32);
+    const fat_sectors: usize = @intCast(bpb.fat_size_16);
+    const num_fats: usize = @intCast(bpb.num_fats);
+    const reserved_sectors: usize = @intCast(bpb.reserved_sectors);
+    const root_entry_count: usize = @intCast(bpb.root_entry_count);
+
+    const root_dir_sectors: usize = ((root_entry_count * 32) + (bytes_per_sector - 1)) / bytes_per_sector;
+    const data_sectors: usize = total_sectors - (reserved_sectors + (num_fats * fat_sectors) + root_dir_sectors);
+    const clusters = data_sectors / @as(usize, @intCast(bpb.sectors_per_cluster));
+    print.dbg("num of clusters: {}", .{clusters});
+
+    if (clusters < 4085) return .FAT12;
+    if (clusters < 65525) return .FAT16;
     
     return .FAT32;
-    //return .unitialized;
 }
 
-const BPB = extern struct {
-    jump_boot: [3]u8,
-    oem_name: [8]u8,
+const BPB = packed struct {
+    jmp_instruction: u24,
+    OEM_identifier: u64,
+
     bytes_per_sector: u16,
     sectors_per_cluster: u8,
-    reserved_sector_count: u16,
+    reserved_sectors: u16,
     num_fats: u8,
     root_entry_count: u16,
-    total_sectors_16: u16,
-    media: u8,
+    num_sectors_16: u16,
+    media_type: u8,
     fat_size_16: u16,
     sectors_per_track: u16,
     num_heads: u16,
     hidden_sectors: u32,
-    total_sectors_32: u32,
-    fat_size_32: u32,
-    ext_flags: u16,
-    fs_version: u16,
-    root_cluster: u32,
-    fs_info: u16,
-    backup_boot_sector: u16,
-    __reserved__0: [12]u8,
-    drive_number: u8,
-    __reserved__1: u8,
-    boot_signature: u8,
-    volume_id: u32,
-    volume_label: [11]u8,
-    fs_type: [8]u8,
+    num_sectors_32: u32
 };
