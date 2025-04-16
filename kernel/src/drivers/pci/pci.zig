@@ -1,8 +1,10 @@
 const std = @import("std");
 const os = @import("root").os;
 const port = os.port_io;
+const config = os.config;
 
-const xhci = @import("../usb/xhci.zig");
+const xhci = os.drivers.xhci;
+const ehci = os.drivers.ehci;
 
 const write = os.console_write("PCI");
 const printf = struct {
@@ -189,10 +191,11 @@ pub fn function_scan(addr: Addr) void {
                     switch (addr.prog_if().read()) {
                         else => printf(" - Unknown USB controller\r\n", .{}),
                         0x20 => {
-                            printf(" - USB2 EHCI controller\r\n", .{});
+                            printf(" - USB2 eHCI controller\r\n", .{});
+                            ehci.register_device(addr);
                         },
                         0x30 => {
-                            printf(" - USB3 XHCI controller\r\n", .{});
+                            printf(" - USB3 xHCI controller\r\n", .{});
                             xhci.register_device(addr);
                         },
                     }

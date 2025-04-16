@@ -33,8 +33,8 @@ pub fn init() void {
 }
 
 pub fn register_device(device: pci.Addr) void {
-    if (comptime (!os.config.input.usb.enable)) {
-        write.warn("USB input is disabled!", .{});
+    if (comptime (!os.config.input.usb3.enable)) {
+        write.warn("USB3 input is disabled!", .{});
         return;
     }
 
@@ -64,7 +64,7 @@ pub fn register_device(device: pci.Addr) void {
 
 const write_device = os.console_write("USB Device");
 fn controller_task(args: ?*anyopaque) callconv(.C) isize {
-    write_device.dbg("Task started...", .{});
+    write_device.dbg("Listening USB 3 port...", .{});
 
     const dev = @as(*Device, @alignCast(@ptrCast(args))).device_addr;
     const controller = @as(*Device, @alignCast(@ptrCast(args))).controller;

@@ -127,7 +127,7 @@ fn update_debug_info() void {
 
     for (0..framebuffer_data.width) |x| fb[x + framebuffer_data.width] = .char(196);
 
-    const sidx = getStartIndex(history.items, framebuffer_data.width, framebuffer_data.height - 2);
+    const sidx = getStartIndex(history.items, framebuffer_data.width, framebuffer_data.height - 3);
     const str = history.items[sidx..];
 
     var x: usize = 0;

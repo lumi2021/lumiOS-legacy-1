@@ -1,6 +1,12 @@
 pub const input = .{
-    .usb = .{ .enable = false },
+    .usb2 = .{ .enable = true },
+    .usb3 = .{ .enable = true },
     .ps2 = .{ .enable = true, .keyboard = true, .mouse = true },
+};
+pub const storage = .{
+    .enable = true,
+    .ahci = true,
+    .ide = true,
 };
 
 pub const max_ioapics = 5;

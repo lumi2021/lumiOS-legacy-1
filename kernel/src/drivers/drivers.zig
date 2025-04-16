@@ -1,5 +1,6 @@
 pub const pci = @import("pci/pci.zig");
-pub const xhci = @import("usb/xhci.zig");
+pub const xhci = @import("usb/xhci/xhci.zig");
+pub const ehci = @import("usb/ehci/ehci.zig");
 pub const ps2 = @import("ps2/ps2.zig");
 pub const disk = @import("disk//disk.zig");
 
