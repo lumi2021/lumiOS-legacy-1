@@ -1,12 +1,11 @@
 pub const input = .{
     .usb2 = .{ .enable = true },
     .usb3 = .{ .enable = true },
-    .ps2 = .{ .enable = true, .keyboard = true, .mouse = true },
+    .ps2  = .{ .enable = true, .keyboard = true, .mouse = true },
 };
 pub const storage = .{
-    .enable = true,
-    .ahci = true,
-    .ide = true,
+    .ahci = .{ .enable = false },
+    .ide  = .{ .enable = true },
 };
 
 pub const max_ioapics = 5;
@@ -31,19 +30,19 @@ pub const debug_ignore: []const KeyValuePair = &[_]KeyValuePair{
     .{ .key = "syscall", .value = ignore_all },
 
     // file system
-    .{ .key = "fs", .value = ignore_all },
-    .{ .key = "partitions", .value = ignore_all },
+    .{ .key = "fs", .value = default },
+    .{ .key = "partitions", .value = default },
 
     // Drivers related
     .{ .key = "drivers", .value = default },
     .{ .key = "PCI", .value = default },
-    .{ .key = "ps2", .value = ignore_all },
+    .{ .key = "ps2", .value = default },
 
     // Devices
-    .{ .key = "aHCI", .value = ignore_all },
-    .{ .key = "xHCI", .value = ignore_all },
-    .{ .key = "keyboard", .value = ignore_all },
-    .{ .key = "mouse", .value = ignore_all },
+    .{ .key = "aHCI", .value = default },
+    .{ .key = "xHCI", .value = default },
+    .{ .key = "keyboard", .value = default },
+    .{ .key = "mouse", .value = default },
 
     // Allocations
     .{ .key = "alloc", .value = ignore_all },

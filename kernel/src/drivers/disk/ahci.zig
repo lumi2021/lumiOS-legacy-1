@@ -9,6 +9,11 @@ const write = os.console_write("aHCI");
 const st = os.stack_tracer;
 
 pub fn init_device(addr: pci.Addr) void {
+    if (comptime (!os.config.storage.ahci.enable)) {
+        write.warn("USB2 input is disabled!", .{});
+        return;
+    }
+
     st.push(@src()); defer st.pop();
 
     write.log("Trying to initialize device...", .{});

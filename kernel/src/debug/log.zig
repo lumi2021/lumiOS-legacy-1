@@ -86,7 +86,7 @@ pub fn create_history() !void {
     history = String.init(os.memory.allocator);
     history_enabled = true;
 
-    debug_win = gl.create_window(.text, 50, gl.canvasCharHeight - 10, true);
+    debug_win = gl.create_window(.text, gl.canvasCharWidth - 4, gl.canvasCharHeight - 4, true);
     gl.move_window(debug_win, 2, 2);
     gl.focus_window(debug_win);
 }
@@ -135,9 +135,12 @@ fn update_debug_info() void {
 
     for (str) |char| {
         if (char == '\n') { y += 1; x = 0; }
+        else if (char == '\r') { x = 0; }
+
         else if (char < 32) continue
         else {
-            fb[x + (y + 2) * framebuffer_data.width].value = char;
+            if (x <= framebuffer_data.width)
+                fb[x + (y + 2) * framebuffer_data.width].value = char;
             x += 1;
             if (x >= framebuffer_data.width) { x = 0; y += 1; }
         }
@@ -160,7 +163,7 @@ pub fn getStartIndex(s: []const u8, line_width: usize, max_lines: usize) usize {
             const line = s[real_start .. line_start];
 
             const len = line.len;
-            const visuals = (len + line_width - 1) / line_width;
+            const visuals = std.math.divCeil(usize, len, line_width) catch unreachable;
 
             total_lines += visuals;
 

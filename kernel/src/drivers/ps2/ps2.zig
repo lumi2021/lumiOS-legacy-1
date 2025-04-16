@@ -18,8 +18,7 @@ const Device = enum {
 };
 
 pub fn init() void {
-    st.push(@src());
-    defer st.pop();
+    st.push(@src()); defer st.pop();
 
     os.system.sys_flags.clear_interrupt();
     defer os.system.sys_flags.set_interrupt();
@@ -33,8 +32,7 @@ pub fn init() void {
 }
 
 pub fn init_controllers() !void {
-    st.push(@src());
-    defer st.pop();
+    st.push(@src()); defer st.pop();
 
     try disablePrimaryPort();
     try disableSecondaryPort();
@@ -88,8 +86,7 @@ pub fn init_controllers() !void {
 }
 
 fn initDevice(irq: u8, device: Device) !bool {
-    st.push(@src());
-    defer st.pop();
+    st.push(@src()); defer st.pop();
 
     log.log("Trying to init device {s} in irq {}", .{ @tagName(device), irq });
 
