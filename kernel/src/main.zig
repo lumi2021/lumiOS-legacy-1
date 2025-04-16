@@ -83,7 +83,7 @@ pub fn main(binfo: BootInfo) noreturn {
 
     st.pop();
     write.log("halting init thread...", .{});
-    //os.stack_tracer.enabled = false;
+    os.stack_tracer.force_disable = true;
 
     while (true) sys.sys_flags.set_interrupt();
 }
@@ -145,16 +145,15 @@ pub fn panic(msg: []const u8, stack_trace: ?*builtin.StackTrace, return_address:
     _ = return_address;
     _ = stack_trace;
 
-    write.raw("\n!!! Kernel Panic !!!", .{});
-    write.raw("Error message: {s}\r\n", .{msg});
+    write.raw("\n!!! Kernel Panic !!!\n", .{});
+    write.raw("Error message: {s}\n", .{msg});
 
     const stk = st.get_stack_trace();
 
     if (stk.len < 1024) {
         write.raw("Stack Trace ({}):\n", .{stk.len});
         for (stk) |i| {
-            const it = i[0 .. std.mem.indexOf(u8, &i, "\x00") orelse 128];
-            write.raw("   - {s}\n", .{it});
+            write.raw("   - {s}\n", .{ std.mem.sliceTo(&i, 0) });
         }
     }
 

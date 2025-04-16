@@ -11,7 +11,7 @@ var stack_trace_count: u16 = 0;
 const write = os.console_write("stack_tracer");
 
 pub var enabled: bool = true;
-var force_disable: bool = false;
+pub var force_disable: bool = false;
 
 pub inline fn push(src: SourceLocation) void {
     if (!enabled or force_disable or stack_trace == null) return;

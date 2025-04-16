@@ -31,13 +31,13 @@ pub const debug_ignore: []const KeyValuePair = &[_]KeyValuePair{
     // Drivers related
     .{ .key = "drivers", .value = default },
     .{ .key = "PCI", .value = default },
-    .{ .key = "ps2", .value = default },
+    .{ .key = "ps2", .value = ignore_all },
 
     // Devices
-    .{ .key = "aHCI", .value = default },
-    .{ .key = "xHCI", .value = default },
+    .{ .key = "aHCI", .value = ignore_all },
+    .{ .key = "xHCI", .value = ignore_all },
     .{ .key = "keyboard", .value = ignore_all },
-    .{ .key = "mouse", .value = default },
+    .{ .key = "mouse", .value = ignore_all },
 
     // Allocations
     .{ .key = "alloc", .value = ignore_all },
