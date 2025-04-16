@@ -74,15 +74,8 @@ pub fn main(binfo: BootInfo) noreturn {
         _ = os.theading.run_process(@constCast("Adam"), sysprocs.adam.init, null, 0) catch @panic("Cannot initialize Adam");
     }
 
-    write.log("# Starting drivers...", .{});
-    os.drivers.init_all_drivers() catch |err| @panic(@errorName(err));
-
-    write.log("File system:", .{});
-    if (write.isModeEnabled(.Log)) {
-        write.raw("----------------------\n", .{});
-        os.fs.lsrecursive();
-        write.raw("----------------------\n", .{});
-    }
+    // Adam should take the rest of the initialization
+    // after here
 
     write.log("# Starting schedue...", .{});
     setup_pic();
@@ -90,7 +83,7 @@ pub fn main(binfo: BootInfo) noreturn {
 
     st.pop();
     write.log("halting init thread...", .{});
-    os.stack_tracer.enabled = false;
+    //os.stack_tracer.enabled = false;
 
     while (true) sys.sys_flags.set_interrupt();
 }
@@ -152,7 +145,7 @@ pub fn panic(msg: []const u8, stack_trace: ?*builtin.StackTrace, return_address:
     _ = return_address;
     _ = stack_trace;
 
-    write.err("\n!!! Kernel Panic !!!", .{});
+    write.raw("\n!!! Kernel Panic !!!", .{});
     write.raw("Error message: {s}\r\n", .{msg});
 
     const stk = st.get_stack_trace();

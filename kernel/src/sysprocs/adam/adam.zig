@@ -6,6 +6,8 @@ const gl = os.gl;
 
 const sysprocs = @import("../sysprocs.zig");
 
+const print = os.console_write("Adam");
+
 // Adam is a better term for the first father of all tasks
 // than root was! - Terry A. Davis
 
@@ -17,7 +19,10 @@ var debug_ptr: usize = 0;
 pub fn init(_: ?*anyopaque) callconv(.C) isize {
     osstd.debug.print("Adam initialized\n", .{});
 
-    osstd.debug.print("Initializing Window manager...\n", .{});
+    print.log("# Initializing drivers...", .{});
+    _ = osstd.process.create_thead("adam branch", init_all_drivers_async, null);
+
+    osstd.debug.print("# Initializing Window manager...\n", .{});
     _ = osstd.process.create_thead("winman", sysprocs.winman.init, null);
 
     osstd.debug.print("Initializing Adam window...\n", .{});
@@ -30,6 +35,11 @@ pub fn init(_: ?*anyopaque) callconv(.C) isize {
     osstd.debug.print("Adam initialization routine complete.\n", .{});
     while (true) {
     }
+}
+
+pub fn init_all_drivers_async(_: ?*anyopaque) callconv(.C) isize {
+    os.drivers.init_all_drivers() catch |err| @panic(@errorName(err));
+    return 0;
 }
 
 fn draw_ascii() void {

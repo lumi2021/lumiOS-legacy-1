@@ -61,7 +61,8 @@ fn select_next_task() void {
 }
 
 pub fn do_schedue(currContext: *TaskContext) void {
-    st.push(@src()); st.pop();
+    st.enabled = false;
+    defer st.enabled = true;
 
     write.dbg("Scheduing...", .{});
 

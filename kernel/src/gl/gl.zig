@@ -11,8 +11,8 @@ pub var canvasCharWidth: usize = 0;
 pub var canvasCharHeight: usize = 0;
 
 var system_font: Font = undefined;
-pub var system_font_width: usize = undefined;
-pub var system_font_height: usize = undefined;
+var system_font_width: usize = undefined;
+var system_font_height: usize = undefined;
 
 pub var ready = false;
 
@@ -247,8 +247,6 @@ pub fn set_cursor_mode(mode: usize) void {
     cursor.mode = mode;
 }
 pub fn move_cursor(posx: isize, posy: isize) void {
-    st.push(@src()); defer st.pop();
-
     cursor.pos_x = posx;
     cursor.pos_y = posy;
 }
