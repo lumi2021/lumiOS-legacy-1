@@ -133,8 +133,8 @@ fn setup_pic() void {
 fn setup_timer() void {
     st.push(@src()); defer st.pop();
 
-    const frquency = 20;
-    const divisor: u16 = 1193182 / frquency;
+    const frquency = 3000;
+    const divisor: u16 = 1_193_182 / frquency;
 
     io.outb(0x43, 0x36);
     io.outb(0x40, @intCast(divisor & 0xFF));
