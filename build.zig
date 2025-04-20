@@ -59,6 +59,7 @@ pub fn build(b: *Build) void {
         "-M", "q35",
         //"-bios", "deps/debug/OVMF.fd", // for UEFI emulation (not recommended)
         "-m", "512M",
+
         "-accel",
         if (builtin.os.tag == .linux)"kvm"
         else "whpx",
@@ -69,11 +70,11 @@ pub fn build(b: *Build) void {
         "-display", "gtk,zoom-to-fit=on",
 
         // Aditional devices
-        "-device", "ahci,id=ahci",
-        "-device", "ide-hd,drive=drive0,bus=ahci.0",
+        //"-device", "ahci,id=ahci",
+        //"-device", "ide-hd,drive=drive0,bus=ahci.0",
 
         //"-usb",
-        "-device", "qemu-xhci,id=usb",
+        //"-device", "qemu-xhci,id=usb",
         //"-device", "usb-mouse",
         //"-device", "usb-kbd",
 
@@ -85,8 +86,7 @@ pub fn build(b: *Build) void {
         //"-trace", "*xhci*",
 
         // Disk
-        "-drive", "id=drive0,file=zig-out/lumiOS.iso,format=raw,if=none",
-        "-boot", "order=c"
+        "-drive", "file=zig-out/lumiOS.iso,format=raw,if=ide",
     });
     //const run_bochs = b.addSystemCommand(&.{"bochs", "-f", "bochsrc.txt"});
 

@@ -127,7 +127,7 @@ fn update_debug_info() void {
 
     for (0..framebuffer_data.width) |x| fb[x + framebuffer_data.width] = .char(196);
 
-    const sidx = getStartIndex(history.items, framebuffer_data.width, framebuffer_data.height - 3);
+    const sidx = getStartIndex(history.items, framebuffer_data.height - 2);
     const str = history.items[sidx..];
 
     var x: usize = 0;
@@ -142,7 +142,6 @@ fn update_debug_info() void {
             if (x <= framebuffer_data.width)
                 fb[x + (y + 2) * framebuffer_data.width].value = char;
             x += 1;
-            if (x >= framebuffer_data.width) { x = 0; y += 1; }
         }
     }
 
@@ -150,26 +149,18 @@ fn update_debug_info() void {
 }
 
 // ChatGPT code idk what exactly it does
-pub fn getStartIndex(s: []const u8, line_width: usize, max_lines: usize) usize {
-    var total_lines: usize = 0;
-    var line_start: usize = s.len;
-    var i: usize = s.len;
+pub fn getStartIndex(input: []const u8, lines_visible: usize) usize {
+    if (lines_visible == 0 or input.len == 0) return input.len;
 
-    while (i > 0) {
-        i -= 1;
+    var count: usize = 0;
+    var i: usize = input.len;
 
-        if (s[i] == '\n' or i == 0) {
-            const real_start = if (s[i] == '\n') i + 1 else i;
-            const line = s[real_start .. line_start];
-
-            const len = line.len;
-            const visuals = std.math.divCeil(usize, len, line_width) catch unreachable;
-
-            total_lines += visuals;
-
-            if (total_lines > max_lines) return real_start;
-
-            line_start = i;
+    while (i > 0) : (i -= 1) {
+        if (input[i - 1] == '\n') {
+            count += 1;
+            if (count == lines_visible) {
+                return i;
+            }
         }
     }
 

@@ -118,6 +118,9 @@ pub fn function_scan(addr: Addr) void {
         0x01 => {
             switch (addr.sub_class().read()) {
                 else => printf(" - Unknown storage controller ({X:0>2}:{X:0>2})!\r\n", .{addr.base_class().read(), addr.sub_class().read()}),
+                0x01 => {
+                    printf(" - IDE controller\r\n", .{});
+                },
                 0x06 => {
                     printf(" - AHCI controller\r\n", .{});
                     os.drivers.disk.register_AHCI_drive(addr);

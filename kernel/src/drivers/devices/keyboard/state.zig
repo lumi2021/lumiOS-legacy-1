@@ -36,7 +36,7 @@ pub fn logkey(scancode: u16) void {
 
     if (pressed) {
 
-        print.raw("{s} ({X:0>4}) pressed!\r\n", .{@tagName(@as(Keys, @enumFromInt(keycode))), scancode});
+        //print.raw("{s} ({X:0>4}) pressed!\r\n", .{@tagName(@as(Keys, @enumFromInt(keycode))), scancode});
 
         switch (keycode) {
             @intFromEnum(Keys.KEY_0) ... @intFromEnum(Keys.KEY_9)
@@ -56,7 +56,10 @@ pub fn logkey(scancode: u16) void {
 
             @intFromEnum(Keys.CAPSLOCK) => capitalize = !capitalize,
 
-            @intFromEnum(Keys.ESC) => print.raw("{s}\n", .{text.items}),
+            @intFromEnum(Keys.F1) => print.raw("{s}\n", .{text.items}),
+            @intFromEnum(Keys.F2) => os.fs.lsrecursive(),
+
+            @intFromEnum(Keys.F12) => @import("../../../sysprocs/adam/adam.zig").shutdown(),
 
             else => return
         }

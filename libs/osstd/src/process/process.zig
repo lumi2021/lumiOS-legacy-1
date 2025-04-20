@@ -3,7 +3,7 @@ const raw_system_call = root.raw_system_call;
 
 pub const ProcessEntryFunction = *const fn (?*anyopaque) callconv(.C) isize;
 
-pub fn terminate_process(status: isize) noreturn {
+pub fn suicide(status: isize) noreturn {
     // This one needs to be manually called as it cannot return
     asm volatile (
         \\ mov $0, %rax
@@ -14,7 +14,7 @@ pub fn terminate_process(status: isize) noreturn {
     while (true) {}
 }
 
-pub fn create_thead(name: []const u8, entry: ProcessEntryFunction, args: anytype) usize {
+pub fn create_task(name: []const u8, entry: ProcessEntryFunction, args: anytype) usize {
     if (@typeInfo(@TypeOf(args)) != .optional and
     @typeInfo(@TypeOf(args)) != .@"null") @panic("arguments must be a pointer!");
 

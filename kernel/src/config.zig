@@ -4,7 +4,7 @@ pub const input = .{
     .ps2  = .{ .enable = true, .keyboard = true, .mouse = true },
 };
 pub const storage = .{
-    .ahci = .{ .enable = false },
+    .ahci = .{ .enable = true },
     .ide  = .{ .enable = true },
 };
 
@@ -36,7 +36,7 @@ pub const debug_ignore: []const KeyValuePair = &[_]KeyValuePair{
     // Drivers related
     .{ .key = "drivers", .value = default },
     .{ .key = "PCI", .value = default },
-    .{ .key = "ps2", .value = default },
+    .{ .key = "ps2", .value = ignore_all },
 
     // Devices
     .{ .key = "aHCI", .value = default },
