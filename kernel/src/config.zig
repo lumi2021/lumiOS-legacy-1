@@ -36,7 +36,7 @@ pub const debug_ignore: []const KeyValuePair = &[_]KeyValuePair{
     // Drivers related
     .{ .key = "drivers", .value = default },
     .{ .key = "PCI", .value = default },
-    .{ .key = "ps2", .value = ignore_all },
+    .{ .key = "ps2", .value = default },
 
     // Devices
     .{ .key = "aHCI", .value = default },

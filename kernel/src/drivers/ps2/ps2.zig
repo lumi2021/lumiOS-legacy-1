@@ -13,8 +13,8 @@ const max_readwrite_attempts = 10000;
 const max_resend_attempts = 100;
 
 const Device = enum {
-    primary,
-    secondary,
+    mouse,
+    keyboard,
 };
 
 pub fn init() void {
@@ -65,7 +65,7 @@ pub fn init_controllers() !void {
         log.dbg("Initializing primary port", .{});
         try enablePrimaryPort();
 
-        if (!(initDevice(1, .primary) catch false)) {
+        if (!(initDevice(1, .mouse) catch false)) {
             try disablePrimaryPort();
             log.warn("Primary device init failed, disabled port", .{});
         }
@@ -75,7 +75,7 @@ pub fn init_controllers() !void {
         log.dbg("Initializing secondary port", .{});
         try enableSecondaryPort();
 
-        if (!(initDevice(12, .secondary) catch false)) {
+        if (!(initDevice(12, .keyboard) catch false)) {
             try disableSecondaryPort();
             log.warn("Secondary device init failed, disabled port", .{});
         }
@@ -151,7 +151,7 @@ fn enableDevice(device: Device) !void {
     log.dbg(" --- Enabling interrupts", .{});
 
     var shift: u1 = 0;
-    if (device == .secondary) shift = 1;
+    if (device == .keyboard) shift = 1;
     try writeConfigByte((@as(u2, 1) << shift) | try getConfigByte());
 
     log.dbg(" --- Enabling scanning", .{});
@@ -275,7 +275,7 @@ fn disableSecondaryPort() !void {
 fn sendCommand(device: Device, command: u8) !void {
     var resends: usize = 0;
     while (resends < max_resend_attempts) : (resends += 1) {
-        if (device == .secondary) {
+        if (device == .keyboard) {
             try write(0x64, 0xD4);
         }
         try write(0x60, command);

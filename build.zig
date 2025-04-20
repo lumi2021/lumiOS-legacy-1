@@ -70,8 +70,8 @@ pub fn build(b: *Build) void {
         "-display", "gtk,zoom-to-fit=on",
 
         // Aditional devices
-        //"-device", "ahci,id=ahci",
-        //"-device", "ide-hd,drive=drive0,bus=ahci.0",
+        "-device", "ahci,id=ahci",
+        "-device", "ide-hd,drive=drive0,bus=ahci.0",
 
         //"-usb",
         //"-device", "qemu-xhci,id=usb",
@@ -86,7 +86,7 @@ pub fn build(b: *Build) void {
         //"-trace", "*xhci*",
 
         // Disk
-        "-drive", "file=zig-out/lumiOS.iso,format=raw,if=ide",
+        "-drive", "id=drive0,file=zig-out/lumiOS.iso,format=raw,if=none",
     });
     //const run_bochs = b.addSystemCommand(&.{"bochs", "-f", "bochsrc.txt"});
 
