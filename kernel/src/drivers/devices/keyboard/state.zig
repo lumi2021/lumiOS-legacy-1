@@ -59,6 +59,7 @@ pub fn logkey(scancode: u16) void {
             @intFromEnum(Keys.F1) => print.raw("{s}\n", .{text.items}),
             @intFromEnum(Keys.F2) => os.fs.lsrecursive(),
 
+            @intFromEnum(Keys.F11) => @import("../../../sysprocs/adam/adam.zig").reboot(),
             @intFromEnum(Keys.F12) => @import("../../../sysprocs/adam/adam.zig").shutdown(),
 
             else => return

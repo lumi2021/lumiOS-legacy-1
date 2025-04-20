@@ -70,7 +70,11 @@ pub fn run_process(taskName: [:0]const u8, entry: ProcessEntryFunction, args: ?*
 }
 
 pub fn kill_process(tid: usize) void {
-    st.push(@src()); defer st.pop();
+    st.push(@src());
+    defer st.pop();
+
+    os.system.sys_flags.clear_interrupt();
+    defer os.system.sys_flags.clear_interrupt();
 
     const curr = getTask(tid) orelse return;
     task_list[tid] = null;
@@ -78,6 +82,11 @@ pub fn kill_process(tid: usize) void {
 
     curr.destry();
     curr.taskAllocator.deinit();
+
+    var buf: [128]u8 = undefined;
+    const path = std.fmt.bufPrint(&buf, "sys:/proc/{X:0>5}", .{tid}) catch unreachable;
+    write.dbg("removing directory {s}", .{ path });
+    fs.remove(path) catch unreachable;
 
     write.dbg("Task destroyed", .{});
 }

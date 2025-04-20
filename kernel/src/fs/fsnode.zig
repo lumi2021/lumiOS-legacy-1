@@ -38,21 +38,27 @@ pub const FsNode = struct {
         return this;
     }
     
-    pub fn deinit(this: *@This()) void {
+    pub fn remove(this: *@This()) void {
         const alloc = fs.allocator;
 
-        // Deinit children
-        for (this.children.items) |e| e.deinit();
-        this.children.deinit();
+        // detatch from parent
+        const idx = b: {
+            for (this.parent.?.children.items, 0..) |e, i| {
+                if (e == this) break :b i;
+            }
+            unreachable;
+        };
+        _ = this.parent.?.children.orderedRemove(idx);
+
+        this.remove_children();
 
         // free heap data
         alloc.free(this.name);
-        alloc.free(this);
+        alloc.destroy(this);
     }
-    pub fn deinit_children(this: *@This()) void {
-        _ = this;
-        // TODO
-        //
+    pub fn remove_children(this: *@This()) void {
+        for (this.children.items) |e| e.remove();
+        this.children.clearAndFree();
     }
 
     pub inline fn kind(s: *@This()) ResourceKind {

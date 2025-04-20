@@ -20,9 +20,6 @@ const Device = enum {
 pub fn init() void {
     st.push(@src()); defer st.pop();
 
-    os.system.sys_flags.clear_interrupt();
-    defer os.system.sys_flags.set_interrupt();
-
     init_controllers() catch |err| {
         log.err("Unnable to initialize controlellers! {s}", .{@errorName(err)});
         return;

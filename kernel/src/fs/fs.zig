@@ -109,7 +109,7 @@ pub fn reset_drive(slot: usize) void {
 
     write.dbg("reseting drive {c} data...", .{letter});
 
-    drive.deinit_children();
+    drive.remove_children();
     part.scan_partitions(drive.data.disk);
 
     write.dbg("driver {c} reseted!", .{letter});
@@ -143,6 +143,15 @@ pub fn make_file(path: []const u8, data: FsNodeData) (OpenPathError || CreateErr
 
     if (subdir.getChild(path[(last_slash + 1)..]) != null) return error.nameAlreadyExists;
     return subdir.branch(path[(last_slash + 1)..], data);
+}
+
+pub fn remove(path: []const u8) OpenPathError!void {
+    st.push(@src()); defer st.pop();
+
+    const node = try solve_path(path);
+    node.remove();
+
+    write.log("\"{s}\" removed", .{ path });
 }
 
 // system call actions

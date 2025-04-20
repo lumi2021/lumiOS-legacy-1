@@ -2,7 +2,7 @@ const std = @import("std");
 const os = @import("root").os;
 const debug_log = os.debug_log;
 const osstd = @import("osstd");
-const gl = os.gl;
+const ports = os.port_io;
 
 const sysprocs = @import("../sysprocs.zig");
 
@@ -28,11 +28,19 @@ pub fn init(_: ?*anyopaque) callconv(.C) isize {
 }
 
 pub fn init_all_drivers_async(_: ?*anyopaque) callconv(.C) isize {
+    os.system.sys_flags.clear_interrupt();
+    defer os.system.sys_flags.set_interrupt();
+
     os.drivers.init_all_drivers() catch |err| @panic(@errorName(err));
     return 0;
 }
 
 pub fn shutdown() noreturn {
     os.port_io.outw(0x0604, 0x2000);
+    unreachable;
+}
+pub fn reboot() noreturn {
+    while ((ports.inb(0x64) & 0x02) != 0) {}
+    ports.outb(0x64, 0xFE);
     unreachable;
 }
