@@ -80,13 +80,14 @@ fn isDisabled(comptime tag: []const u8, comptime mode: Mode) bool {
 }
 const Mode = enum(u8) { Log = 0b0001, Error = 0b0010, Debug = 0b0100, Warn = 0b1000 };
 
+
 pub fn create_history() !void {
     st.push(@src()); defer st.pop();
     
     history = String.init(os.memory.allocator);
     history_enabled = true;
 
-    debug_win = gl.create_window(.text, gl.canvasCharWidth - 4, gl.canvasCharHeight - 4, true);
+    debug_win = gl.create_window(.text, gl.canvasCharWidth - 4, gl.canvasCharHeight - 4, false);
     gl.move_window(debug_win, 2, 2);
     gl.focus_window(debug_win);
 }
