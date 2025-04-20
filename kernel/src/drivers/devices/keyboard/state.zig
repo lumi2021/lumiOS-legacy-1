@@ -7,6 +7,7 @@ const layout = @embedFile("layouts/pt-br_ABNT2.kbd");
 const String = std.ArrayList(u8);
 var text: String = undefined; 
 
+var shift: bool = false;
 var capitalize: bool = false;
 
 pub fn init() void {
@@ -28,8 +29,8 @@ pub fn logkey(scancode: u16) void {
 
     const writer = text.writer();
 
-    if (keycode == @intFromEnum(Keys.L_SHIFT)) {
-        capitalize = pressed;
+    if (keycode == @intFromEnum(Keys.L_SHIFT) or keycode == @intFromEnum(Keys.R_SHIFT)) {
+        shift = pressed;
         return;
     }
 
@@ -39,10 +40,11 @@ pub fn logkey(scancode: u16) void {
 
         switch (keycode) {
             @intFromEnum(Keys.KEY_0) ... @intFromEnum(Keys.KEY_9)
-                => writer.writeByte('0' + keycode - @intFromEnum(Keys.KEY_0)) catch unreachable,
+                => writer.writeByte(if (!shift) ('0' + keycode - @intFromEnum(Keys.KEY_0))
+                else num_symbols[keycode - @intFromEnum(Keys.KEY_0)]) catch unreachable,
 
             @intFromEnum(Keys.KEY_A) ... @intFromEnum(Keys.KEY_Z)
-                => writer.writeByte(@as(u8, (if (capitalize) 'A' else 'a'))
+                => writer.writeByte(@as(u8, (if (capitalize or shift) 'A' else 'a'))
                 + keycode - @intFromEnum(Keys.KEY_A)) catch unreachable,
 
             @intFromEnum(Keys.SPACE) => writer.writeByte(' ') catch unreachable,
@@ -62,6 +64,7 @@ pub fn logkey(scancode: u16) void {
         //print.raw("{s}\n", .{text.items});
     }
 }
+pub const num_symbols = [_]u8 {')', '!', '@', '#', '$', '%', '"', '&', '*', '('};
 pub const Keys = enum {
     _undefined,
     
