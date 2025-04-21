@@ -23,7 +23,7 @@ pub fn init(_: ?*anyopaque) callconv(.C) isize {
     _ = osstd.process.create_task("winman", sysprocs.winman.init, null);
 
     print.log("Adam initialization routine complete.\n", .{});
-    
+
     while (true) {}
 }
 

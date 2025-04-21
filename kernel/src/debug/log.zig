@@ -87,8 +87,8 @@ pub fn create_history() !void {
     history = String.init(os.memory.allocator);
     history_enabled = true;
 
-    debug_win = gl.create_window(.text, gl.canvasCharWidth - 4, gl.canvasCharHeight - 4, false);
-    gl.move_window(debug_win, 2, 2);
+    debug_win = gl.create_window(.text, gl.canvasCharWidth - 16, gl.canvasCharHeight - 8, false);
+    gl.move_window(debug_win, 8, 4);
     gl.focus_window(debug_win);
 }
 pub fn add_to_history(str: []const u8) void {

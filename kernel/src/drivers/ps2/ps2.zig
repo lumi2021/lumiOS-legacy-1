@@ -9,7 +9,7 @@ const keyboard = @import("keyboard.zig");
 const print = os.console_write("ps2");
 const st = os.stack_tracer;
 
-const max_readwrite_attempts = 10000;
+const max_readwrite_attempts = 50000;
 const max_resend_attempts = 100;
 
 pub fn init() void {
@@ -46,7 +46,7 @@ fn init_controllers() !void {
     try write_port(0x60, @bitCast(config));
 
     // Checking dual-channel
-   enable_port_2();
+    enable_port_2();
     config = @bitCast(try read_port(0x20));
     const dual_channel = config.secondary_clk_enable == .enabled;
     print.dbg("PS/2 controller has {s}", .{if (dual_channel) "two channels" else "one channel"});
@@ -191,14 +191,10 @@ inline fn write_cmd(value: u8) void {
 
 fn write_data(value: u8) !void {
     for (0..max_readwrite_attempts) |_| if (canWrite()) return ports.outb(0x60, value);
-
-    print.dbg("failed to write data", .{});
     return error.timeout;
 }
 fn read_data() !u8 {
     for (0..max_readwrite_attempts) |_| if (canRead()) return ports.inb(0x60);
-
-    print.dbg("failed to read data", .{});
     return error.timeout;
 }
 
