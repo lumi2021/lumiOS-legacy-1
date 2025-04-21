@@ -14,12 +14,13 @@ const st = os.stack_tracer;
 var packageBuf: [3]u8 = undefined;
 var packageCount: usize = 0;
 
-pub fn init() void {
-    intman.interrupts[0x2C] = mouse_interrupt_handler;
+pub fn init(ivector: usize) void {
+    intman.interrupts[ivector] = mouse_interrupt_handler;
 }
 
 fn mouse_interrupt_handler(_: *IntFrame) void {
     st.push(@src()); defer st.pop();
+    defer eoi();
 
     if (ports.inb(0x64) & 1 != 0) {
         packageBuf[packageCount] = ports.inb(0x60);
@@ -30,8 +31,6 @@ fn mouse_interrupt_handler(_: *IntFrame) void {
         } else if (packageCount == 0 and ((packageBuf[0] & 0x08) == 0)) packageCount = 0
         else packageCount += 1;
     }
-
-    eoi();
 }
 
 fn interpret_data() void {

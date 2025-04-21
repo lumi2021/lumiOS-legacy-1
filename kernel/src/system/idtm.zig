@@ -27,9 +27,6 @@ fn init_interrupt_table(idt: *[256]IDTEntry) void {
 }
 
 fn unhandled_interrupt(frame: *InterruptFrame) void {
-    st.push(@src());
-    defer st.pop();
-
     writer.err("Unhandled interrupt {0} (0x{0X:0>2})!\r\n {1}", .{ frame.intnum, frame });
 }
 

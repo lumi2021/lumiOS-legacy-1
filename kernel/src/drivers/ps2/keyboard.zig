@@ -13,8 +13,8 @@ const st = os.stack_tracer;
 var buffer: [2]u8 = .{0x00, 0x00};
 var is_seccond_byte: bool = false;
 
-pub fn init() void {
-    intman.interrupts[0x21] = keyboard_interrupt_handler;
+pub fn init(ivector: usize) void {
+    intman.interrupts[ivector] = keyboard_interrupt_handler;
 }
 
 fn keyboard_interrupt_handler(_: *IntFrame) void {
@@ -23,7 +23,7 @@ fn keyboard_interrupt_handler(_: *IntFrame) void {
 
     if (ports.inb(0x64) & 1 != 0) {
         const scancode = ports.inb(0x60);
-
+  
         if (!is_seccond_byte and scancode == 0xE0 or scancode == 0xE1) {
             buffer[0] = scancode;
             is_seccond_byte = true;
@@ -31,6 +31,7 @@ fn keyboard_interrupt_handler(_: *IntFrame) void {
         }
         else buffer[1] = scancode;
 
+        write.dbg("{}", .{std.mem.readInt(u16, &buffer, .big)});
         state.logkey(std.mem.readInt(u16, &buffer, .big));
         buffer = .{0x00, 0x00};
         is_seccond_byte = false;

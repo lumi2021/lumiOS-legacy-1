@@ -6,308 +6,282 @@ const ports = os.port_io;
 const mouse = @import("mouse.zig");
 const keyboard = @import("keyboard.zig");
 
-const log = os.console_write("ps2");
+const print = os.console_write("ps2");
 const st = os.stack_tracer;
 
 const max_readwrite_attempts = 10000;
 const max_resend_attempts = 100;
 
-const Device = enum {
-    mouse,
-    keyboard,
-};
-
 pub fn init() void {
     st.push(@src()); defer st.pop();
 
     init_controllers() catch |err| {
-        log.err("Unnable to initialize controlellers! {s}", .{@errorName(err)});
+        print.err("Unnable to initialize controlellers! ({s})", .{@errorName(err)});
         return;
     };
 
-    log.log("ps2 initialized", .{});
+    print.log("PS/2 initialized", .{});
 }
 
-pub fn init_controllers() !void {
-    st.push(@src()); defer st.pop();
+fn init_controllers() !void {
 
-    try disablePrimaryPort();
-    try disableSecondaryPort();
+    // disabling devices and
+    // cleaning the buffer
+    disable_port_1();
+    disable_port_2();
+    flush();
 
-    _ = ports.inb(0x60);
+    // Setting the command byte
+    var config: CommandByte = @bitCast(try read_port(0x20));
+    config.primary_irq_enabled = false;
+    config.secondary_irq_enabled = false;
+    config.scancode_translation_mode = true;
+    try write_port(0x60, @bitCast(config));
 
-    // Disable interrupts, enable translation
-    const init_config_byte = (1 << 6) | (~@as(u8, 3) & try getConfigByte());
-    try writeConfigByte(init_config_byte);
+    // Doing self-test 
+    write_cmd(0xAA);
+    if (try read_data() != 0x55) return error.selfTestFailed;
 
-    if (!try controllerSelfTest()) {
-        log.warn("Controller self-test failed!", .{});
-        return error.FailedSelfTest;
+    // Setting com byte again bruh
+    try write_port(0x60, @bitCast(config));
+
+    // Checking dual-channel
+   enable_port_2();
+    config = @bitCast(try read_port(0x20));
+    const dual_channel = config.secondary_clk_enable == .enabled;
+    print.dbg("PS/2 controller has {s}", .{if (dual_channel) "two channels" else "one channel"});
+    disable_port_2();
+
+    print.dbg("Detecting enabled ports...", .{});
+
+    var port_1 = true;
+    var port_2 = dual_channel;
+
+    var result: PortTestResult = undefined;
+    // Performing interface tests
+    
+    if (port_1) {
+        result = @enumFromInt(try read_port(0xAB));
+        port_1 = result == .test_passed;
     }
 
-    log.dbg("Controller self-test succeeded", .{});
-
-    try writeConfigByte(init_config_byte);
-
-    var dual_channel = ((1 << 5) & init_config_byte) != 0;
-
-    if (dual_channel) {
-        try enableSecondaryPort();
-        dual_channel = ((1 << 5) & try getConfigByte()) == 0;
-        try disableSecondaryPort();
-    } else log.dbg("Not dual channel", .{});
-
-    log.log("Detecting active ports, dual_channel = {}", .{dual_channel});
-
-    try enablePrimaryPort();
-
-    if (testPrimaryPort() catch false) {
-        log.dbg("Initializing primary port", .{});
-        try enablePrimaryPort();
-
-        if (!(initDevice(1, .mouse) catch false)) {
-            try disablePrimaryPort();
-            log.warn("Primary device init failed, disabled port", .{});
-        }
+    if (port_2) {
+        result = @enumFromInt(try read_port(0xA9));
+        port_2 = result == .test_passed;
     }
 
-    if (dual_channel and testSecondaryPort() catch false) {
-        log.dbg("Initializing secondary port", .{});
-        try enableSecondaryPort();
+    if (!port_1 and !port_2) return error.all_ports_failed;
 
-        if (!(initDevice(12, .keyboard) catch false)) {
-            try disableSecondaryPort();
-            log.warn("Secondary device init failed, disabled port", .{});
-        }
+    // Enabling, reseting and detecting device in port 1
+    if (port_1) {
+        print.log("Device present in first port.", .{});
+        enable_port_1();
+        init_device(.primary) catch {
+            disable_port_1();
+            port_1 = false;
+        };
     }
+    if (port_2) {
+        print.log("Device present in seccond port.", .{});
+        enable_port_2();
+        init_device(.secondary) catch {
+            disable_port_2();
+            port_2 = false;
+        };
+    }
+
+    if (!port_1 and !port_2) return error.all_ports_failed;
+
+    print.log("Enabling devices interrupt", .{});
+    config = @bitCast(try read_port(0x20));
+    config.primary_irq_enabled = port_1;
+    config.secondary_irq_enabled = port_2;
+    try write_port(0x60, @bitCast(config));
 }
 
-fn initDevice(irq: u8, device: Device) !bool {
-    st.push(@src()); defer st.pop();
 
-    log.log("Trying to init device {s} in irq {}", .{ @tagName(device), irq });
-
-    log.dbg(" - Resetting device", .{});
-
-    try sendCommand(device, 0xFF);
-
-    if (0xAA != try read()) {
-        log.err("- Device reset failed", .{});
-        return error.DeviceResetFailed;
-    }
-
-    try sendCommand(device, 0xF5); // Disabling scanning
-    try sendCommand(device, 0xF2); // Identifying device
-
-    const first = read() catch |err| {
-        switch (err) {
-            error.Timeout => {
-                log.warn(" - No identity byte, assuming keyboard", .{});
-                return initKeyboard(irq, device);
-            },
-            else => return err,
-        }
-    };
-
-    switch (first) {
-        0x00 => {
-            log.dbg(" - PS2: Standard mouse", .{});
-            return initMouse(irq, device);
-        },
-        0x03 => {
-            log.dbg(" - Scrollwheel mouse", .{});
-            return initMouse(irq, device);
-        },
-        0x04 => {
-            log.dbg(" - 5-button mouse", .{});
-            return initMouse(irq, device);
-        },
-        0xAB => {
-            switch (try read()) {
-                0x41, 0xC1 => {
-                    log.dbg(" - MF2 keyboard with translation", .{});
-                    return initKeyboard(irq, device);
-                },
-                0x83 => {
-                    log.dbg(" - MF2 keyboard", .{});
-                    return initKeyboard(irq, device);
-                },
-                else => |wtf| {
-                    log.warn(" - Identify: Unknown byte after 0xAB: 0x{X}", .{wtf});
-                },
-            }
-        },
+fn select_device(typeval: u8) !Device {
+    if (typeval != 0xAB)  return switch (typeval) {
+        0x00 => .Standard_Mouse,
+        0x03 => .Scrollwheel_Mouse,
+        0x04 => .Five_Button_Mouse,
         else => {
-            log.warn(" - Identify: Unknown first byte: 0x{X}", .{first});
+            print.err("Unknown device {X:2>0}", .{typeval});
+            return .Unknown;
         },
     }
-
-    return false;
-}
-fn enableDevice(device: Device) !void {
-    st.push(@src());
-    defer st.pop();
-
-    log.dbg(" --- Enabling interrupts", .{});
-
-    var shift: u1 = 0;
-    if (device == .keyboard) shift = 1;
-    try writeConfigByte((@as(u2, 1) << shift) | try getConfigByte());
-
-    log.dbg(" --- Enabling scanning", .{});
-    try sendCommand(device, 0xF4);
-}
-
-// init specific devices
-fn initMouse(irq: u8, device: Device) !bool {
-    if (!os.config.input.ps2.mouse) return false;
-
-    st.push(@src());
-    defer st.pop();
-
-    log.log(" -- Initializing mouse ({s} in irq {})", .{ @tagName(device), irq });
-
-    mouse.init();
-
-    try enableDevice(device);
-
-    return true;
-}
-fn initKeyboard(irq: u8, device: Device) !bool {
-    if (!os.config.input.ps2.keyboard) return false;
-
-    st.push(@src());
-    defer st.pop();
-
-    log.log(" -- Initializing keyboard ({s} in irq {})", .{ @tagName(device), irq });
-
-    keyboard.init();
-
-    try enableDevice(device);
-
-    return true;
-}
-
-// can read/write
-fn canWrite() bool {
-    return (ports.inb(0x64) & 2) == 0;
-}
-fn canRead() bool {
-    return (ports.inb(0x64) & 1) != 0;
-}
-
-// read/write
-fn write(port: u16, value: u8) !void {
-    var counter: usize = 0;
-    while (counter < max_readwrite_attempts) : (counter += 1) {
-        if (canWrite()) {
-            return ports.outb(port, value);
+    else return switch (try read_data()) {
+        0x41,
+        0xC1 => .MF2_Keyboard_Translated,
+        0x83 => .MF2_Keyboard,
+        else => {
+            print.err("Unknown device AB{X:2>0}", .{typeval});
+            return .Unknown;
         }
+    };
+}
+fn init_device(port: Port) !void {
+    print.log("Reseting...", .{});
+
+    try write_device(port, 0xFF);
+
+    if (try read_data() != 0xAA) {
+        print.err("Port 2 reset failed!", .{});
+        return error.portResetFailed;
     }
 
-    log.warn("Timeout while writing to port 0x{X}!", .{port});
-    return error.Timeout;
-}
-fn read() !u8 {
-    var counter: usize = 0;
-    while (counter < max_readwrite_attempts) : (counter += 1) {
-        if (canRead()) {
-            return ports.inb(0x60);
-        }
+    flush();
+    try write_device(port, 0xF5); // Disable scanning
+    try write_device(port, 0xF2); // Identifying devices
+    const first = try read_data();
+
+    const device = try select_device(first);
+    print.log("Device in {s} port is {s} (irq {})", .{@tagName(port), @tagName(device), @as(u8, if (port == .primary) 1 else 12)});
+    
+    const port_irq: usize = switch (port) { .primary => 0x21, .secondary => 0x2C };
+
+    switch (device) {
+        .Standard_Mouse,
+        .Scrollwheel_Mouse,
+        .Five_Button_Mouse => mouse.init(port_irq),
+
+        .MF2_Keyboard,
+        .MF2_Keyboard_Translated => keyboard.init(port_irq),
+
+        else => {}
     }
 
-    log.warn("Timeout while reading!", .{});
-    return error.Timeout;
+    try write_device(port, 0xF6);
+    print.log("Enabling device scanning", .{});
+    try write_device(port, 0xF4);
 }
 
-// Config bytes
-fn getConfigByte() !u8 {
-    try write(0x64, 0x20);
-    return read();
+
+inline fn read_port(port: u8) !u8 {
+    write_cmd(port);
+    return try read_data();
 }
-fn writeConfigByte(config_byte_value: u8) !void {
-    try write(0x64, 0x60);
-    try write(0x60, config_byte_value);
+inline fn write_port(port: u8, val: u8) !void {
+    write_cmd(port);
+    try write_data(val);
 }
 
-// Test controller
-fn controllerSelfTest() !bool {
-    try write(0x64, 0xAA);
-    return 0x55 == try read();
-}
+fn write_device(dev: Port, value: u8) !void {
+    for (0 .. max_resend_attempts) |_| {
 
-// Test ports
-fn testPrimaryPort() !bool {
-    try write(0x64, 0xAB);
-    return portTest();
-}
-fn testSecondaryPort() !bool {
-    try write(0x64, 0xA9);
-    return portTest();
-}
-fn portTest() !bool {
-    switch (try read()) {
-        0x00 => return true, // Success
-        0x01 => log.err("Port test failed: Clock line stuck low", .{}),
-        0x02 => log.err("Port test failed: Clock line stuck high", .{}),
-        0x03 => log.err("Port test failed: Data line stuck low", .{}),
-        0x04 => log.err("Port test failed: Data line stuck high", .{}),
-        else => |result| log.err("Port test failed: Unknown reason (0x{X})", .{result}),
-    }
-    return false;
-}
+        if (dev == .secondary) write_cmd(0xD4);
+        try write_data(value);
 
-// Enable/Disable ports
-fn disablePrimaryPort() !void {
-    try write(0x64, 0xAD);
-}
-fn enablePrimaryPort() !void {
-    try write(0x64, 0xAE);
-}
-fn enableSecondaryPort() !void {
-    try write(0x64, 0xA8);
-}
-fn disableSecondaryPort() !void {
-    try write(0x64, 0xA7);
-}
-
-// Device things
-fn sendCommand(device: Device, command: u8) !void {
-    var resends: usize = 0;
-    while (resends < max_resend_attempts) : (resends += 1) {
-        if (device == .keyboard) {
-            try write(0x64, 0xD4);
-        }
-        try write(0x60, command);
-        awaitAck() catch |err| {
-            switch (err) {
-                error.Resend => {
-                    log.dbg("Device requested command resend", .{});
-                    continue;
-                },
-                else => return err,
-            }
+        await_ack() catch |err| switch (err) {
+            error.resend => continue,
+            else => return err
         };
         return;
     }
 
-    return error.TooManyResends;
+    return error.too_many_requests;
 }
-fn awaitAck() !void {
-    while (true) {
-        const v = read() catch |err| {
-            log.err("ACK read failed: {s}!", .{@errorName(err)});
-            return err;
-        };
 
-        switch (v) {
-            // ACK
-            0xFA => return,
+inline fn status() Status {
+    return @bitCast(ports.inb(0x64));
+}
+inline fn write_cmd(value: u8) void {
+    ports.outb(0x64, value);
+}
 
-            // Resend
-            0xFE => return error.Resend,
+fn write_data(value: u8) !void {
+    for (0..max_readwrite_attempts) |_| if (canWrite()) return ports.outb(0x60, value);
 
-            else => log.dbg("Got a different value: 0x{X}", .{v}),
-        }
+    print.dbg("failed to write data", .{});
+    return error.timeout;
+}
+fn read_data() !u8 {
+    for (0..max_readwrite_attempts) |_| if (canRead()) return ports.inb(0x60);
+
+    print.dbg("failed to read data", .{});
+    return error.timeout;
+}
+
+inline fn flush() void {
+    while (canRead()) _ = ports.inb(0x60);
+}
+
+inline fn canRead() bool {
+    return status().output_buffer == .full;
+}
+inline fn canWrite() bool {
+    return status().input_buffer == .empty;
+}
+
+fn await_ack() !void {
+    switch (try read_data()) {
+        0xFA => return,
+        0xFE => return error.resend,
+        else => |v| print.err("Got a different value: 0x{X}", .{v}),
     }
 }
+
+inline fn enable_port_1() void { write_cmd(0xAE); }
+inline fn enable_port_2() void { write_cmd(0xA8); }
+inline fn disable_port_1() void { write_cmd(0xAD); }
+inline fn disable_port_2() void { write_cmd(0xA7); }
+
+const Status = packed struct(u8) {
+    output_buffer: BufferState, // if full, data can be read from `data` port
+    input_buffer: BufferState, // if empty, data can be written to `data` port
+    selftest_ok: bool, // state of the self test. should always be `true`.
+    last_port: u1, // last used port. 0=>0x60, 1=>0x61 or 0x64.
+    keyboard_lock: KeyboardLockState,
+    aux_input_buffer: BufferState, // PSAUX?
+    timeout: bool, // If `true`, the device doesn't respond.
+    parity_error: bool, // If `true`, a transmit error happend for the last read or write.
+};
+const KeyboardLockState = enum(u1) {
+    locked = 0,
+    unlocked = 1,
+};
+const BufferState = enum(u1) {
+    empty = 0,
+    full = 1,
+};
+
+const CommandByte = packed struct(u8) {
+    const ClockEnable = enum(u1) {
+        enabled = 0,
+        disabled = 1,
+    };
+
+    primary_irq_enabled: bool, // 0: First PS/2 port interrupt (1 = enabled, 0 = disabled)
+    secondary_irq_enabled: bool, // 1: Second PS/2 port interrupt (1 = enabled, 0 = disabled, only if 2 PS/2 ports supported)
+    system_flag: bool, // 2: System Flag (1 = system passed POST, 0 = your OS shouldn't be running)
+    ignore_safety_state: bool, // 3: Should be zero
+    primary_clk_enable: ClockEnable, // 4: First PS/2 port clock (1 = disabled, 0 = enabled)
+    secondary_clk_enable: ClockEnable, // 5: Second PS/2 port clock (1 = disabled, 0 = enabled, only if 2 PS/2 ports supported)
+    scancode_translation_mode: bool, // 6: First PS/2 port translation (1 = enabled, 0 = disabled)
+    reserved: u1, // 7: must be zero
+};
+
+const PortTestResult = enum(u8) {
+    test_passed = 0x00,
+    clock_line_stuck_low = 0x01,
+    clock_line_stuck_high = 0x02,
+    data_line_stuck_low = 0x03,
+    data_line_stuck_high = 0x04,
+    _,
+};
+
+const Port = enum {
+    primary,
+    secondary
+};
+const Device = enum {
+    Unknown, 
+
+    Standard_Mouse,
+    Scrollwheel_Mouse,
+    Five_Button_Mouse,
+
+    MF2_Keyboard,
+    MF2_Keyboard_Translated,
+
+};
