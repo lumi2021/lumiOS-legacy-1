@@ -31,7 +31,6 @@ fn keyboard_interrupt_handler(_: *IntFrame) void {
         }
         else buffer[1] = scancode;
 
-        write.dbg("{}", .{std.mem.readInt(u16, &buffer, .big)});
         state.logkey(std.mem.readInt(u16, &buffer, .big));
         buffer = .{0x00, 0x00};
         is_seccond_byte = false;
