@@ -17,7 +17,7 @@ pub fn detect_partition_type(driver: disk.DiskEntry, entry: GPTEntry) PartitionT
     print.dbg("loading sector {}", .{entry.first_lba});
 
     var sector: [512]u8 = undefined;
-    disk.read(driver, entry.first_lba, &sector);
+    disk.read(driver, entry.first_lba, &sector) catch unreachable;
 
     if (std.mem.eql(u8, sector[0x1 .. 0x6], "CD001")) {
         return .iso9660;

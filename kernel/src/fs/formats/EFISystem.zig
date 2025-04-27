@@ -15,7 +15,7 @@ pub fn detect_partition_type(driver: disk.DiskEntry, entry: GPTEntry) PartitionT
     st.push(@src()); defer st.pop();
 
     var sec_buf: [512]u8 = undefined;
-    disk.read(driver, entry.first_lba, &sec_buf);
+    disk.read(driver, entry.first_lba, &sec_buf) catch unreachable;
 
     const bpb = std.mem.bytesToValue(BPB, &sec_buf);
 

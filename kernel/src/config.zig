@@ -31,7 +31,7 @@ pub const debug_ignore: []const KeyValuePair = &[_]KeyValuePair{
 
     // file system
     .{ .key = "fs", .value = default },
-    .{ .key = "partitions", .value = ignore_all },
+    .{ .key = "partitions", .value = default },
 
     // Drivers related
     .{ .key = "drivers", .value = default },

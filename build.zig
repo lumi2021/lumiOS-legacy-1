@@ -1,5 +1,6 @@
 const std = @import("std");
 const Build = std.Build;
+const Step = Build.Step;
 const Target = std.Target;
 const builtin = @import("builtin");
 
@@ -12,23 +13,42 @@ pub fn build(b: *Build) void {
     b.exe_dir = "zig-out/";
 
     // bootloader
-    const install_bootloadr_step = b.step("install bootloader", "");
-    install_bootloadr_step.dependOn(&b.addInstallFile(b.path("deps/boot/limine_bootloaderx64.EFI"), ".disk/EFI/BOOT/BOOTX64.EFI").step);
-    install_bootloadr_step.dependOn(&b.addInstallFile(b.path("deps/boot/limine_config.txt"), ".disk/boot/limine/limine.conf").step);
-    install_bootloadr_step.dependOn(&b.addInstallFile(b.path("deps/boot/limine-uefi-cd.bin"), ".disk/boot/limine/limine-uefi-cd.bin").step);
-    install_bootloadr_step.dependOn(&b.addInstallFile(b.path("deps/boot/limine-bios-cd.bin"), ".disk/boot/limine/limine-bios-cd.bin").step);
-    install_bootloadr_step.dependOn(&b.addInstallFile(b.path("deps/boot/limine-bios.sys"), ".disk/boot/limine/limine-bios.sys").step);
+    const install_bootloader_step = b.allocator.create(Step) catch unreachable;
+    install_bootloader_step.* = Step.init(.{
+        .id = .custom,
+        .name = "Install Bootloader",
+        .owner = b
+    });
+    {
+    install_bootloader_step.dependOn(&b.addInstallFile(b.path("deps/boot/limine_bootloaderx64.EFI"),
+        ".disk/EFI/BOOT/BOOTX64.EFI").step);
+    install_bootloader_step.dependOn(&b.addInstallFile(b.path("deps/boot/limine_config.txt"),
+        ".disk/boot/limine/limine.conf").step);
+    install_bootloader_step.dependOn(&b.addInstallFile(b.path("deps/boot/limine-uefi-cd.bin"),
+        ".disk/boot/limine/limine-uefi-cd.bin").step);
+    install_bootloader_step.dependOn(&b.addInstallFile(b.path("deps/boot/limine-bios-cd.bin"),
+        ".disk/boot/limine/limine-bios-cd.bin").step);
+    install_bootloader_step.dependOn(&b.addInstallFile(b.path("deps/boot/limine-bios.sys"),
+        ".disk/boot/limine/limine-bios.sys").step);
+    }
 
     // kernel
     const kernel_dep = b.dependency("kernel", .{});
     const kernel = kernel_dep.artifact("kernel");
     const install_kernel_step = b.addInstallFile(kernel.getEmittedBin(), ".disk/kernelx64");
 
+    // random files for dbg
+    var buf: [18]u8 = undefined;
+    for (0 .. 20) |i| {
+        const a = b.addInstallFile(b.path(".zigversion"),
+        std.fmt.bufPrint(&buf, ".disk/FILE{:0>4}.TXT", .{i}) catch unreachable);
+        install_kernel_step.step.dependOn(&a.step);
+    }
+
     // cmd commands
     const geneate_img_cmd = b.addSystemCommand(&.{
         "xorriso",
         "-as", "mkisofs",
-        "-R", "-r", "-J",
 
         "-b", "boot/limine/limine-bios-cd.bin",
         
@@ -90,7 +110,7 @@ pub fn build(b: *Build) void {
     });
     //const run_bochs = b.addSystemCommand(&.{"bochs", "-f", "bochsrc.txt"});
 
-    geneate_img_cmd.step.dependOn(install_bootloadr_step);
+    geneate_img_cmd.step.dependOn(install_bootloader_step);
     geneate_img_cmd.step.dependOn(&install_kernel_step.step);
 
     limine_bios_install.step.dependOn(&geneate_img_cmd.step);

@@ -12,7 +12,7 @@ pub fn scan_partitions(driver: disk.DiskEntry) void {
 
     var sector: [512]u8 = undefined;
     print.dbg("Reading drive sector 0...", .{});
-    disk.read(driver, 0, &sector);
+    disk.read(driver, 0, &sector) catch unreachable;
     print.dbg("drive sector 0 read finished!", .{});
 
     if (sector[0x1FE] != 0x55 or sector[0x1FF] != 0xAA) return;
@@ -43,7 +43,7 @@ fn scan_gpt_table(driver: disk.DiskEntry) void {
     st.push(@src()); defer st.pop();
 
     var sector: [512]u8 = undefined;
-    disk.read(driver, 1, &sector);
+    disk.read(driver, 1, &sector) catch unreachable;
 
     // TODO only work for little-endian CPUs
     const header = std.mem.bytesToValue(GPTHeader, sector[0 .. @sizeOf(GPTHeader)]);
@@ -53,7 +53,7 @@ fn scan_gpt_table(driver: disk.DiskEntry) void {
 
     const buffer = os.memory.allocator.alloc(u8, sector_count * 512) catch unreachable;
     defer os.memory.allocator.free(buffer);
-    disk.read(driver, header.part_entry_lba, buffer);
+    disk.read(driver, header.part_entry_lba, buffer) catch unreachable;
 
     const entries = std.mem.bytesAsSlice(GPTEntry, buffer);
 
@@ -96,8 +96,8 @@ fn scan_gpt_table(driver: disk.DiskEntry) void {
         }});
 
         switch (partType) {
-            //.FAT12 => format.FAT12.analyze_partition(driver, node, i.first_lba, i.last_lba),
-            .FAT32 => format.FAT32.analyze_partition(driver, node, i.first_lba, i.last_lba),
+            .FAT12 => format.FAT12.analyze_partition(driver, node, i.first_lba, i.last_lba),
+            //.FAT32 => format.FAT32.analyze_partition(driver, node, i.first_lba, i.last_lba),
             else => |t| print.err("Partition type {s} not implemented!", .{@tagName(t)})
         }
 

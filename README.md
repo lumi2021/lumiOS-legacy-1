@@ -10,7 +10,7 @@ windows 11 2.
 **Project contents:**
 - [x] A kernel (obviously lol);
 - [x] A application library (WIP);
-- [x] A little graphics API (WIP)
+- [x] A tiny graphics API (WIP)
 
 **Kernel:**
 - [x] System Calls;
@@ -22,11 +22,12 @@ windows 11 2.
 
 **File System:**
 - [x] A simple file system (WIP);
-- [ ] SATA Devices support (WIP)
+- [ ] SATA Devices support (WIP);
+- [ ] FAT system (WIP)
 
 **Device support:**
 - [x] PS/2 Mouse support (WIP);
-- [ ] PS/2 Keyboard support (WIP);
+- [x] PS/2 Keyboard support (WIP);
 - [ ] USB General support;
 - [ ] USB Mouse support;
 - [ ] USB Keyboard support;
