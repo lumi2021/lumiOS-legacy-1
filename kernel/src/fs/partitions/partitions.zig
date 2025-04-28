@@ -3,6 +3,7 @@ const std = @import("std");
 
 const disk = os.drivers.disk;
 const format = os.fs.format;
+const fs = os.fs;
 
 const print = os.console_write("partitions");
 const st = os.stack_tracer;
@@ -13,10 +14,10 @@ pub fn scan_partitions(driver: disk.DiskEntry) void {
     var sector: [512]u8 = undefined;
     print.dbg("Reading drive sector 0...", .{});
     disk.read(driver, 0, &sector) catch unreachable;
-    print.dbg("drive sector 0 read finished!", .{});
 
     if (sector[0x1FE] != 0x55 or sector[0x1FF] != 0xAA) return;
 
+    print.dbg("Seeking for partition entries in sector 0...", .{});
     for (0 .. 4) |i| {
         const base = 0x1BE + i * 16;
         const edata = sector[base..];
@@ -51,11 +52,14 @@ fn scan_gpt_table(driver: disk.DiskEntry) void {
     const total_size = header.num_part_entries * header.size_of_part_entry;
     const sector_count = std.math.divCeil(usize, total_size, 512) catch unreachable;
 
-    const buffer = os.memory.allocator.alloc(u8, sector_count * 512) catch unreachable;
+    print.dbg("Partition table has {} sectors", .{sector_count});
+    const buffer = os.memory.allocator.alloc(u8, total_size) catch unreachable;
     defer os.memory.allocator.free(buffer);
+
     disk.read(driver, header.part_entry_lba, buffer) catch unreachable;
 
-    const entries = std.mem.bytesAsSlice(GPTEntry, buffer);
+    const entries: []align(1) GPTEntry = std.mem.bytesAsSlice(GPTEntry, buffer);
+    print.dbg("Seeking for partition entries in sector {}...", .{header.part_entry_lba});
 
     const drive_node = os.fs.get_drive_node(driver.index);
 
@@ -79,7 +83,7 @@ fn scan_gpt_table(driver: disk.DiskEntry) void {
 
         if (partType == .unitialized) {
             // Partition type not recognized
-            print.warn("Partition not recognized!", .{});
+            print.warn("Partition not recognized! (GUID = {s})", .{buf});
             continue;
         }
 
@@ -90,13 +94,13 @@ fn scan_gpt_table(driver: disk.DiskEntry) void {
 
         _ = std.unicode.utf16LeToUtf8(&buf, &i.name) catch unreachable;
         const node = drive_node.branch(std.mem.sliceTo(&buf, 0), .{ .partition = .{
-            .part_type = partType,
             .sectors_start = @truncate(i.first_lba),
-            .sectors_end = @truncate(i.last_lba)
+            .sectors_end = @truncate(i.last_lba),
+            .part_data = undefined
         }});
 
         switch (partType) {
-            .FAT12 => format.FAT12.analyze_partition(driver, node, i.first_lba, i.last_lba),
+            .FAT12 => format.FAT12.analyze_partition(driver, node),
             //.FAT32 => format.FAT32.analyze_partition(driver, node, i.first_lba, i.last_lba),
             else => |t| print.err("Partition type {s} not implemented!", .{@tagName(t)})
         }
@@ -105,6 +109,49 @@ fn scan_gpt_table(driver: disk.DiskEntry) void {
 }
 
 const Guid = os.utils.Guid;
+
+// fs
+pub const DiskPartition = struct {
+    sectors_start: u32,
+    sectors_end: u32,
+    part_data: PartitionData
+};
+pub const PartitionData = union(PartitionType) {
+    unitialized: void,
+
+    iso9660: void,
+
+    FAT12: struct {
+        fat_table_ptr: usize,
+        fat_table_len: usize,
+
+        root_dir_ptr: usize,
+        root_dir_len: usize,
+
+        data_start_ptr: usize
+    },
+    FAT16: void,
+    FAT32: void,
+
+    ext2: void,
+    ext4: void,
+
+    HFS_plus: void,
+
+    pub fn get_disk_device(s: *@This()) disk.DiskEntry {
+        const disk_part: *DiskPartition = @fieldParentPtr("part_data", s);
+        print.dbg("a: {}", .{ disk_part.sectors_end });
+        const fs_node_data: *fs.FsNode.NodeData = @fieldParentPtr("partition", disk_part);
+        print.dbg("b: {s}", .{ @tagName(fs_node_data.*) });
+        const fs_node: *fs.FsNode = @fieldParentPtr("data", fs_node_data);
+        print.dbg("c: {s}", .{ fs_node.name });
+
+        // a partition's parent is aways a device
+        const dev_node = fs_node.parent.?;
+        print.dbg("d: {s}", .{ dev_node.name });
+        return dev_node.data.disk;
+    }
+};
 
 pub const PartTableEntry = packed struct {
     status: u8,

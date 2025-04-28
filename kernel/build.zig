@@ -19,7 +19,7 @@ pub fn build(b: *Build) void {
     kernel_query.cpu_features_sub.addFeature(@intFromEnum(Feature.avx));
     kernel_query.cpu_features_sub.addFeature(@intFromEnum(Feature.avx2));
 
-    const optimize = b.standardOptimizeOption(.{ .preferred_optimize_mode = .ReleaseSmall });
+    const optimize = b.standardOptimizeOption(.{ .preferred_optimize_mode = .ReleaseFast });
 
     const kernel = b.addExecutable(.{
         .name = "kernel",

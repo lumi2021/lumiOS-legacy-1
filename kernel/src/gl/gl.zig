@@ -36,7 +36,7 @@ var cursor_texture: []Pixel = undefined;
 pub fn init(fb: bootInfo.FrameBuffer) void {
     st.push(@src()); defer st.pop();
 
-    system_font = assets.fonts[4];
+    system_font = assets.fonts[2];
     system_font.scale = 1;
     system_font_width = (system_font.width + 1) * system_font.scale + 1;
     system_font_height = (system_font.height + 1) * system_font.scale;

@@ -3,6 +3,7 @@ const std = @import("std");
 
 const disk = os.drivers.disk;
 const fs = os.fs;
+const part = fs.partitions;
 
 const ResourceHandler = os.system.ResourceHandler;
 const ResourceKind = ResourceHandler.Kind;
@@ -72,7 +73,6 @@ pub const FsNode = struct {
         const new = FsNode.init(name, data);
         // Add as child
         this.children.append(new) catch unreachable;
-
         // Set child's parent data
         new.parent = this;
 
@@ -87,12 +87,14 @@ pub const FsNode = struct {
         }
         return null;
     }
+
+    pub const NodeData = FsNodeData;
 };
 
 pub const FsNodeData = union(ResourceKind) {
     device: void,
     disk: disk.DiskEntry,
-    partition: DiskPartition,
+    partition: part.DiskPartition,
 
     file: void,
     directory: void,
@@ -100,12 +102,6 @@ pub const FsNodeData = union(ResourceKind) {
     symlink: FsNodeSymlink,
     pipe: FsNodePipe,
     sharedPipe: FsNodePipe,
-};
-
-pub const DiskPartition = struct {
-    sectors_start: u32,
-    sectors_end: u32,
-    part_type: fs.partitions.PartitionType
 };
 
 pub const FsNodePipe = struct {
