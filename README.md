@@ -22,8 +22,9 @@ windows 11 2.
 
 **File System:**
 - [x] A simple file system (WIP);
-- [ ] SATA Devices support (WIP);
-- [ ] FAT system (WIP)
+- [x] SATA Devices support (WIP);
+- [x] FAT system (WIP);
+- [ ] ext4 system;
 
 **Device support:**
 - [x] PS/2 Mouse support (WIP);
@@ -32,7 +33,7 @@ windows 11 2.
 - [ ] USB Mouse support;
 - [ ] USB Keyboard support;
 - [ ] Basic Graphics Card support;
-- [ ] Basic Aldio Card support
+- [ ] Basic Audio Card support
 
 **Useability:**
 - [x] Graphics (WIP);
@@ -55,3 +56,4 @@ From oldest to newest:
 ![lilguy](.github/assets/demo_0.png)
 ![boobes](.github/assets/demo_1.png)
 ![window](.github/assets/demo_2.png)
+![filesy](.github/assets/demo_4.png)

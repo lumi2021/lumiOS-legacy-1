@@ -39,40 +39,55 @@ pub fn analyze_partition(part_node: *fs.FsNode) void {
         .data_start_ptr = data_start
     }};
 
-    print.log("Root directory table ({} sectors) in ({} .. {}). Iterating...",
-        .{rds_len, rds_start, rds_start + rds_len});
+    var long_name_buf: [256]u16 = undefined;
+    var utf8_long_name_buf: [512]u8 = undefined;
+    var long_name_idx: usize = 0;
 
     for (0 .. rds_len) |i| {
         const sector =  rds_start + i;
 
-        print.log("--- Sector {} / {} ---", .{i, sector});
         disk.read(dev, sector, &buf) catch unreachable;
 
         const entries: []DirEntry = @alignCast(std.mem.bytesAsSlice(DirEntry, &buf));
 
         for (entries) |entry| {
             if (entry.name[0] == 0x00) break;
-            if (@as(u8, @bitCast(entry.file_attributes)) == 0x0f) print.log("(fake entry)", .{})
+            if (@as(u8, @bitCast(entry.file_attributes)) == 0x0f) {
+                long_name_idx += 1;
 
-            else {
-                
-                var node: *fs.FsNode = undefined;
-                if (entry.is_directory()) {
-                    
-                    print.log("({X:0>2}) {s: <14} - directory", .{entry.name[0], entry.get_name()});
-                    node = part_node.branch(entry.get_name(), .{ .directory = undefined });
-                } else {
-                    print.log("({X:0>2}) {s: <10}.{s <3} - {} bytes",
-                        .{entry.name[0], entry.get_name(), entry.get_extension(), entry.file_size});
-                    
-                    var name_buf: [12]u8 = undefined;
-                    const str = std.fmt.bufPrint(&name_buf, "{s}.{s}",
-                        .{entry.get_name(), entry.get_extension()}) catch unreachable;
+                const str_idx = 512 - long_name_idx * 26;
+                const entry_idx = i * 32;
+                const buf_u8 = @as([*]u8, @ptrCast(&long_name_buf));
 
-                    node = part_node.branch(str, .{ .file = undefined });
+                @memcpy(buf_u8[str_idx..],      buf[entry_idx + 0x01 .. entry_idx + 0x0B]); // 5 chars, 10 bytes
+                @memcpy(buf_u8[str_idx + 10..], buf[entry_idx + 0x0E .. entry_idx + 0x1A]); // 6 chars, 12 bytes
+                @memcpy(buf_u8[str_idx + 22..], buf[entry_idx + 0x1C .. entry_idx + 0x20]); // 2 chars, 4  bytes
+            }
+            else { // Is valid entry
+
+                var long_name: ?[]u8 = null;
+
+                if (long_name_idx > 0) {
+                    const str_idx = 256 - long_name_idx * 13;
+                    _ = std.unicode.utf16LeToUtf8(
+                        &utf8_long_name_buf,
+                        long_name_buf[str_idx ..]
+                    ) catch unreachable;
+                    long_name = std.mem.sliceTo(&utf8_long_name_buf, 0);
+                    long_name_idx = 0;
                 }
 
-                if (entry.is_directory()) {
+                var name_buf: [12]u8 = undefined;
+
+                var node: *fs.FsNode = undefined;
+                if (!entry.is_directory()) {
+                   const str_name = long_name orelse std.fmt.bufPrint(&name_buf, "{s}.{s}",
+                        .{entry.get_name(), entry.get_extension()}) catch unreachable;
+                    node = part_node.branch(str_name, .{ .file = undefined });
+                } else {
+                    const str_name = long_name orelse entry.get_name();
+                    node = part_node.branch(str_name, .{ .directory = undefined });
+
                     const start_cluster = @as(u32, @intCast(entry.first_cluster_high)) << 16 | entry.first_cluster_low;
                     const pointing_to = data_start + start_cluster;
 
@@ -99,39 +114,52 @@ fn parse_subdirectory(part_node: *fs.FsNode, parent_node: *fs.FsNode, offset: us
     var sector: usize = data_start + offset;
     sec: while (true) {
 
-        print.log("--- Sector {} ---", .{sector});
         disk.read(dev, sector, &buf) catch unreachable;
 
         const entries: []DirEntry = @alignCast(std.mem.bytesAsSlice(DirEntry, &buf));
 
-        //var long_name_buf: [256]u8 = undefined;
-        //var long_name_idx: usize = 0;
+        var long_name_buf: [256]u16 = undefined;
+        var utf8_long_name_buf: [512]u8 = undefined;
+        var long_name_idx: usize = 0;
 
         for (entries, 0..) |entry, i| {
             if (entry.name[0] == 0x00) break :sec;
             if (@as(u8, @bitCast(entry.file_attributes)) == 0x0f) {
-                print.log("(fake entry)", .{});
-                _ = i;
-            } 
-            else {
+                long_name_idx += 1;
+
+                const str_idx = 512 - long_name_idx * 26;
+                const entry_idx = i * 32;
+                const buf_u8 = @as([*]u8, @ptrCast(&long_name_buf));
+
+                @memcpy(buf_u8[str_idx..],      buf[entry_idx + 0x01 .. entry_idx + 0x0B]); // 5 chars, 10 bytes
+                @memcpy(buf_u8[str_idx + 10..], buf[entry_idx + 0x0E .. entry_idx + 0x1A]); // 6 chars, 12 bytes
+                @memcpy(buf_u8[str_idx + 22..], buf[entry_idx + 0x1C .. entry_idx + 0x20]); // 2 chars, 4  bytes
+            }
+            else { // Is valid entry
                 
                 var node: *fs.FsNode = undefined;
-                if (entry.is_directory()) {
-                    
-                    print.log("({X:0>2}) {s: <14} - directory", .{entry.name[0], entry.get_name()});
-                    node = parent_node.branch(entry.get_name(), .{ .directory = undefined });
-                } else {
-                    print.log("({X:0>2}) {s: <10}.{s <3} - {} bytes",
-                        .{entry.name[0], entry.get_name(), entry.get_extension(), entry.file_size});
-                    
-                    var name_buf: [12]u8 = undefined;
-                    const str = std.fmt.bufPrint(&name_buf, "{s}.{s}",
-                        .{entry.get_name(), entry.get_extension()}) catch unreachable;
+                var long_name: ?[]u8 = null;
 
-                    node = parent_node.branch(str, .{ .file = undefined });
+                if (long_name_idx > 0) {
+                    const str_idx = 256 - long_name_idx * 13;
+                    _ = std.unicode.utf16LeToUtf8(
+                        &utf8_long_name_buf,
+                        long_name_buf[str_idx ..]
+                    ) catch unreachable;
+                    long_name = std.mem.sliceTo(&utf8_long_name_buf, 0);
+                    long_name_idx = 0;
                 }
 
-                if (entry.is_directory()) {
+                var name_buf: [12]u8 = undefined;
+
+                if (!entry.is_directory()) {
+                    const str_name = long_name orelse std.fmt.bufPrint(&name_buf, "{s}.{s}",
+                        .{entry.get_name(), entry.get_extension()}) catch unreachable;
+                    node = parent_node.branch(str_name, .{ .file = undefined });
+                } else {
+                    const str_name = long_name orelse entry.get_name();
+                    node = parent_node.branch(str_name, .{ .directory = undefined });
+
                     const start_cluster = @as(u32, @intCast(entry.first_cluster_high)) << 16 | entry.first_cluster_low
                         + 1; // FIXME i got this +1 from my ass without it it doesn't work
                     
@@ -142,7 +170,6 @@ fn parse_subdirectory(part_node: *fs.FsNode, parent_node: *fs.FsNode, offset: us
 
                     parse_subdirectory(part_node, node, start_cluster);
                 }
-
             }
         }
 
