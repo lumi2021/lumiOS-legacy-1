@@ -131,6 +131,54 @@ pub fn move_window(ctx: usize, posx: usize, posy: usize) void {
     window.position_x = @bitCast(@min(posx, canvasCharWidth - 1));
     window.position_y = @bitCast(@min(posy, canvasCharHeight - 1));
 }
+pub fn resize_window(ctx: usize, width: usize, height: usize) void {
+    const window = window_list[ctx] orelse @panic("Invalid context descriptor");
+
+    const old_char_width = window.charWidth;
+    const old_char_height = window.charHeight;
+
+    const buf_len = old_char_width * old_char_height * 2;
+    if (window.mode == .text) {
+        const buf: []Char = window.buffer_0.char[0 .. buf_len];
+        allocator.free(buf);
+    } else {
+        const buf: []Pixel = window.buffer_0.pixel[0 .. buf_len];
+        allocator.free(buf);
+    }
+
+    redraw_screen_region(
+        window.position_x,
+        window.position_y,
+        window.position_x + @as(isize, @bitCast(old_char_width)),
+        window.position_y + @as(isize, @bitCast(old_char_height)),
+        false);
+
+    window.charWidth = width;
+    window.charHeight = height;
+
+    window.pixelWidth = width * system_font_width;
+    window.pixelHeight = height * system_font_height;
+
+    if (window.mode == .text) {
+        const buf = allocator.alloc(Char, window.charWidth * window.charHeight * 2) catch unreachable;
+        window.buffer_0.char = (buf[0..]).ptr;
+        window.buffer_1.char = (buf[window.charWidth * window.charHeight ..]).ptr;
+        @memset(buf, Char{ .color = .{ .byte = 0b0000_0001 }, .value = ' ' });
+    } else {
+        const buf = allocator.alloc(Pixel, window.pixelWidth * window.pixelHeight * 2) catch unreachable;
+        window.buffer_0.pixel = (buf[0..]).ptr;
+        window.buffer_1.pixel = (buf[window.pixelWidth * window.pixelHeight ..]).ptr;
+        @memset(buf, .rgb(0, 0, 0));
+    }
+
+    redraw_screen_region(
+        window.position_x,
+        window.position_y,
+        window.position_x + @as(isize, @bitCast(width)),
+        window.position_y + @as(isize, @bitCast(height)),
+        true);
+}
+
 
 pub fn get_buffer_info(ctx: usize) struct { buf: Framebuffer, width: usize, height: usize } {
     const window = window_list[ctx] orelse @panic("Invalid context descriptor");

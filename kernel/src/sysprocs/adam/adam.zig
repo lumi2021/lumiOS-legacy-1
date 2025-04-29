@@ -17,7 +17,7 @@ pub fn init(_: ?*anyopaque) callconv(.C) isize {
     print.log("Adam initialized\n", .{});
 
     print.log("# Initializing drivers...", .{});
-    _ = osstd.process.create_task("adam branch", init_all_drivers_async, null);
+    _ = osstd.process.create_task("eve", init_all_drivers_sync, null);
 
     print.log("# Initializing Window manager...\n", .{});
     _ = osstd.process.create_task("winman", sysprocs.winman.init, null);
@@ -27,7 +27,7 @@ pub fn init(_: ?*anyopaque) callconv(.C) isize {
     while (true) {}
 }
 
-pub fn init_all_drivers_async(_: ?*anyopaque) callconv(.C) isize {
+pub fn init_all_drivers_sync(_: ?*anyopaque) callconv(.C) isize {
     os.system.sys_flags.clear_interrupt();
     defer os.system.sys_flags.set_interrupt();
 

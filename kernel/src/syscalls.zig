@@ -23,15 +23,19 @@ pub fn init() !void {
 
     inline for (0..255) |i| syscalls[i] = unhandled_syscall;
 
-    syscalls[0x00] = suicide;
-    syscalls[0x01] = print_stdout;
+    syscalls[0x0_00] = suicide;
+    syscalls[0x0_01] = print_stdout;
 
-    syscalls[0x02] = open_file_descriptor;
-    syscalls[0x03] = close_file_descriptor;
-    syscalls[0x04] = write;
-    syscalls[0x05] = read;
+    //syscalls[0x1_00] = mem_map;
+    //syscalls[0x1_02] = mem_remap;
+    //syscalls[0x1_03] = mem_free;
 
-    syscalls[0x06] = branch_subprocess;
+    syscalls[0x2_00] = open_file_descriptor;
+    syscalls[0x2_01] = close_file_descriptor;
+    syscalls[0x2_02] = write;
+    syscalls[0x2_03] = read;
+
+    syscalls[0x3_00] = branch_subprocess;
 
     idtm.interrupts[0x80] = syscall_interrupt;
 }
