@@ -56,4 +56,4 @@ From oldest to newest:
 ![lilguy](.github/assets/demo_0.png)
 ![boobes](.github/assets/demo_1.png)
 ![window](.github/assets/demo_2.png)
-![filesy](.github/assets/demo_4.png)
+![filesy](.github/assets/demo_3.png)
