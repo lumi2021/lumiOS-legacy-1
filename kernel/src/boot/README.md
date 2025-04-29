@@ -1,4 +1,4 @@
-# /src/boot/
+# src/boot/
 
 This directory is basically a trash bin for things that
 are used once right after the kernel boots.
