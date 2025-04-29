@@ -4,14 +4,14 @@ const std = @import("std");
 const disk = os.drivers.disk;
 const partitions = os.fs.partitions;
 const format = os.fs.format;
-const PartitionType = partitions.PartitionType;
+const FileSystem = partitions.FileSystem;
 
 const print = os.console_write("partitions");
 const st = os.stack_tracer;
 
 const GPTEntry = partitions.GPTEntry;
 
-pub fn detect_partition_type(driver: disk.DiskEntry, entry: GPTEntry) PartitionType {
+pub fn detect_partition_fs(driver: disk.DiskEntry, entry: GPTEntry) FileSystem {
     st.push(@src()); defer st.pop();
 
     var sec_buf: [512]u8 = undefined;

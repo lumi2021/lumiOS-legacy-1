@@ -8,11 +8,12 @@ const format = os.fs.format;
 const print = os.console_write("partitions");
 const st = os.stack_tracer;
 
-pub fn analyze_partition(dev: disk.DiskEntry, part_node: *fs.FsNode) void {
+pub fn analyze_partition(part_node: *fs.FsNode) void {
     st.push(@src()); defer st.pop();
 
-    var data = part_node.data.partition;
+    var data = &part_node.data.partition;
     const start = data.sectors_start;
+    const dev = part_node.parent.?.data.disk;
 
     print.dbg("start sector: {}", .{ start });
 
@@ -22,16 +23,13 @@ pub fn analyze_partition(dev: disk.DiskEntry, part_node: *fs.FsNode) void {
     const bpb = std.mem.bytesToValue(BootSector, &buf);
     
     const fat_start = start + bpb.reserved_sector_count;
-
     const rds_start = fat_start + (bpb.table_size_16 * bpb.table_count);
-    
     const rds_len = std.math.divCeil(usize,
         bpb.root_entry_count * @sizeOf(DirEntry),
         bpb.bytes_per_sector) catch unreachable;
-
     const data_start = rds_start + rds_len - 2;
 
-    data.part_data = .{ .FAT12 = .{
+    data.file_system = .{ .FAT12 = .{
         .fat_table_ptr = fat_start,
         .fat_table_len = bpb.table_size_16,
 
@@ -41,7 +39,7 @@ pub fn analyze_partition(dev: disk.DiskEntry, part_node: *fs.FsNode) void {
         .data_start_ptr = data_start
     }};
 
-    print.log("Root directory table ({} sectors) in {} .. {}. Iterating...",
+    print.log("Root directory table ({} sectors) in ({} .. {}). Iterating...",
         .{rds_len, rds_start, rds_start + rds_len});
 
     for (0 .. rds_len) |i| {
@@ -81,7 +79,7 @@ pub fn analyze_partition(dev: disk.DiskEntry, part_node: *fs.FsNode) void {
                     print.log("(Directory pointing to {})", .{pointing_to});
                     if (entry.name[0] == '.') continue;
 
-                    parse_subdirectory(&data.part_data, node, start_cluster);
+                    parse_subdirectory(part_node, node, start_cluster);
                 }
 
             }
@@ -89,27 +87,32 @@ pub fn analyze_partition(dev: disk.DiskEntry, part_node: *fs.FsNode) void {
     }
 }
 
-fn parse_subdirectory(partdata: *PartitionData, parent_node: *fs.FsNode, offset: usize) void {
+fn parse_subdirectory(part_node: *fs.FsNode, parent_node: *fs.FsNode, offset: usize) void {
     st.push(@src()); defer st.pop();
 
     var buf: [512]u8 = undefined;
 
-    const data_start = partdata.FAT12.data_start_ptr;
-    const dev = partdata.get_disk_device();
+    const file_system = part_node.data.partition.file_system;
+    const data_start = file_system.FAT12.data_start_ptr;
+    const dev = part_node.parent.?.data.disk;
 
-    var i: usize = offset;
-    while (true) {
-        const sector =  data_start + i;
+    var sector: usize = data_start + offset;
+    sec: while (true) {
 
-        print.log("--- Sector {} / {} ---", .{i, sector});
+        print.log("--- Sector {} ---", .{sector});
         disk.read(dev, sector, &buf) catch unreachable;
 
         const entries: []DirEntry = @alignCast(std.mem.bytesAsSlice(DirEntry, &buf));
 
-        for (entries) |entry| {
-            if (entry.name[0] == 0x00) break;
-            if (@as(u8, @bitCast(entry.file_attributes)) == 0x0f) print.log("(fake entry)", .{})
+        //var long_name_buf: [256]u8 = undefined;
+        //var long_name_idx: usize = 0;
 
+        for (entries, 0..) |entry, i| {
+            if (entry.name[0] == 0x00) break :sec;
+            if (@as(u8, @bitCast(entry.file_attributes)) == 0x0f) {
+                print.log("(fake entry)", .{});
+                _ = i;
+            } 
             else {
                 
                 var node: *fs.FsNode = undefined;
@@ -129,28 +132,51 @@ fn parse_subdirectory(partdata: *PartitionData, parent_node: *fs.FsNode, offset:
                 }
 
                 if (entry.is_directory()) {
-                    const start_cluster = @as(u32, @intCast(entry.first_cluster_high)) << 16 | entry.first_cluster_low;
+                    const start_cluster = @as(u32, @intCast(entry.first_cluster_high)) << 16 | entry.first_cluster_low
+                        + 1; // FIXME i got this +1 from my ass without it it doesn't work
+                    
                     const pointing_to = data_start + start_cluster;
 
                     print.log("(Directory pointing to {})", .{pointing_to});
                     if (entry.name[0] == '.') continue;
 
-                    parse_subdirectory(partdata, node, start_cluster);
+                    parse_subdirectory(part_node, node, start_cluster);
                 }
 
             }
         }
 
-        i = get_next_sector(partdata, i) orelse break;
+        sector = get_next_sector(part_node, sector) orelse break;
+
     }
     
 }
 
-fn get_next_sector(partdata: *PartitionData, current: usize) ?usize {
-    _ = partdata;
-    _ = current;
+fn get_next_sector(part_node: *fs.FsNode, current: usize) ?usize {
+    st.push(@src()); defer st.pop();
 
-    return null;
+    var buf: [512]u8 = undefined;
+
+    const file_system = part_node.data.partition.file_system;
+    const fat_start = file_system.FAT12.fat_table_ptr;
+    const dev = part_node.parent.?.data.disk;
+
+    const iseven = current % 2 == 0;
+    const fat_index = (current * 3) / 2;
+    const sector_off = fat_index / 512;
+    const rel_index = fat_index % 512;
+
+    disk.read(dev, fat_start + sector_off, &buf) catch unreachable;
+
+    print.dbg("Seeking cluster {} of sector {} ({} in sector {} of fat table)...",
+        .{fat_index, current, rel_index, sector_off});
+
+    const raw_cluster = std.mem.readInt(u16, buf[rel_index..][0..2], .little);
+    const cluster = if (iseven) (raw_cluster & 0x0fff) else (raw_cluster >> 4);
+
+    print.dbg("found cluster {} (0x{X:0>3})", .{cluster, cluster});
+
+    return if (cluster >= 0x002 and cluster <= 0xfef) cluster else null;
 }
 
 const PartitionData = fs.partitions.PartitionData;

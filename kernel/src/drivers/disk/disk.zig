@@ -56,6 +56,9 @@ pub fn read(disk: DiskEntry, sector: u64, buffer: []u8) !void {
         .ahci => |d| try ahci.read(d, sector, buffer)
     }
 }
+pub inline fn read_id(disk_id: usize, sector: u64, buffer: []u8) !void {
+    return read(.{ .index = disk_id, .data = &disk_list[disk_id] }, sector, buffer);
+}
 
 pub const DiskEntry = struct {
     index: usize,

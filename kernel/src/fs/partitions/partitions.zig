@@ -69,39 +69,42 @@ fn scan_gpt_table(driver: disk.DiskEntry) void {
 
         _ = std.fmt.bufPrint(&buf, "{}", .{i.type_guid}) catch unreachable;
 
-        var partType: PartitionType = .unitialized;
+        var file_sys: FileSystem = .unitialized;
 
         // Basic Data Partition
         if (std.mem.eql(u8, &buf, "EBD0A0A2-B9E5-4433-87C0-68B6B72699C7")) {
-            partType = format.BasicData.detect_partition_type(driver, i);
+            file_sys = format.BasicData.detect_partition_fs(driver, i);
         }
 
         // EFI Partition
         else if (std.mem.eql(u8, &buf, "C12A7328-F81F-11D2-BA4B-00A0C93EC93B")) {
-            partType = format.EFISystem.detect_partition_type(driver, i);
+            file_sys = format.EFISystem.detect_partition_fs(driver, i);
         }
 
-        if (partType == .unitialized) {
+        if (file_sys == .unitialized) {
             // Partition type not recognized
             print.warn("Partition not recognized! (GUID = {s})", .{buf});
             continue;
         }
 
-        print.log("Partition type is {s}", .{@tagName(partType)});
+        print.log("Partition file system is {s}", .{@tagName(file_sys)});
 
         // parsing the partition name as ASCII
         _ = std.unicode.utf16LeToUtf8(&buf, &i.name) catch unreachable;
 
         _ = std.unicode.utf16LeToUtf8(&buf, &i.name) catch unreachable;
-        const node = drive_node.branch(std.mem.sliceTo(&buf, 0), .{ .partition = .{
-            .sectors_start = @truncate(i.first_lba),
-            .sectors_end = @truncate(i.last_lba),
-            .part_data = undefined
-        }});
+        const node = drive_node.branch(std.mem.sliceTo(&buf, 0), .{
+            .partition = .{
+                .disk_id = driver.index,
+                .sectors_start = @truncate(i.first_lba),
+                .sectors_end = @truncate(i.last_lba),
+                .file_system = undefined
+            }
+        });
 
-        switch (partType) {
-            .FAT12 => format.FAT12.analyze_partition(driver, node),
-            //.FAT32 => format.FAT32.analyze_partition(driver, node, i.first_lba, i.last_lba),
+        switch (file_sys) {
+            .FAT12 => format.FAT12.analyze_partition(node),
+            //.FAT32 => format.FAT32.analyze_partition(node),
             else => |t| print.err("Partition type {s} not implemented!", .{@tagName(t)})
         }
 
@@ -112,11 +115,12 @@ const Guid = os.utils.Guid;
 
 // fs
 pub const DiskPartition = struct {
+    disk_id: usize,
     sectors_start: u32,
     sectors_end: u32,
-    part_data: PartitionData
+    file_system: FileSystemData
 };
-pub const PartitionData = union(PartitionType) {
+pub const FileSystemData = union(FileSystem) {
     unitialized: void,
 
     iso9660: void,
@@ -137,20 +141,6 @@ pub const PartitionData = union(PartitionType) {
     ext4: void,
 
     HFS_plus: void,
-
-    pub fn get_disk_device(s: *@This()) disk.DiskEntry {
-        const disk_part: *DiskPartition = @fieldParentPtr("part_data", s);
-        print.dbg("a: {}", .{ disk_part.sectors_end });
-        const fs_node_data: *fs.FsNode.NodeData = @fieldParentPtr("partition", disk_part);
-        print.dbg("b: {s}", .{ @tagName(fs_node_data.*) });
-        const fs_node: *fs.FsNode = @fieldParentPtr("data", fs_node_data);
-        print.dbg("c: {s}", .{ fs_node.name });
-
-        // a partition's parent is aways a device
-        const dev_node = fs_node.parent.?;
-        print.dbg("d: {s}", .{ dev_node.name });
-        return dev_node.data.disk;
-    }
 };
 
 pub const PartTableEntry = packed struct {
@@ -188,7 +178,7 @@ pub const GPTEntry = extern struct {
     name: [36]u16, // UTF-16LE
 };
 
-pub const PartitionType = enum {
+pub const FileSystem = enum {
     unitialized,
 
     iso9660,
