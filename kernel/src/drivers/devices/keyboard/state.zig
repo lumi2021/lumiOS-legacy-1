@@ -56,8 +56,12 @@ pub fn logkey(scancode: u16) void {
 
             @intFromEnum(Keys.CAPSLOCK) => capitalize = !capitalize,
 
-            @intFromEnum(Keys.F1) => print.raw("{s}\n", .{text.items}),
+            @intFromEnum(Keys.F1) => {
+                print.raw("{s}", .{text.items});
+                text.clearAndFree();
+            },
             @intFromEnum(Keys.F2) => os.fs.lsrecursive(),
+            @intFromEnum(Keys.F3) => os.gl.toggle_z_buffer(),
 
             @intFromEnum(Keys.F11) => @import("../../../sysprocs/adam/adam.zig").reboot(),
             @intFromEnum(Keys.F12) => @import("../../../sysprocs/adam/adam.zig").shutdown(),

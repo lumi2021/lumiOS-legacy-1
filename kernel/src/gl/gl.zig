@@ -14,6 +14,7 @@ const system_font_width: usize = 10;
 const system_font_height: usize = 16;
 
 pub var ready = false;
+var show_z_buf = false;
 
 pub const assets = @import("assets/assets.zig");
 
@@ -217,8 +218,11 @@ pub fn focus_window(ctx: usize) void {
         }
     }
 }
+pub inline fn toggle_z_buffer() void {
+    show_z_buf = !show_z_buf;
+    redraw_screen_region(0, 0, @intCast(canvasCharWidth), @intCast(canvasCharHeight), true);
+}
 
-var show_z = false;
 pub fn redraw_screen_region(rx: isize, ry: isize, rw: isize, rh: isize, update_cursor: bool) void {
     st.push(@src()); defer st.pop();
 
@@ -239,13 +243,13 @@ pub fn redraw_screen_region(rx: isize, ry: isize, rw: isize, rh: isize, update_c
                 const right = win.position_x + @as(isize, @bitCast(win.charWidth));
                 const bottom = win.position_y + @as(isize, @bitCast(win.charHeight));
 
-                if (x < win.position_x) root_draw_char(if (y < win.position_y) 201 else if (y >= bottom) 200 else 186, x, y)
-                else if (x >= right) root_draw_char(if (y < win.position_y) 187 else if (y >= bottom) 188 else 186, x, y)
-                else root_draw_char(205, x, y);
+                if (x < win.position_x) root_draw_char(if (y < win.position_y) 201 else if (y >= bottom) 200 else 186, 1, x, y)
+                else if (x >= right) root_draw_char(if (y < win.position_y) 187 else if (y >= bottom) 188 else 186, 1, x, y)
+                else root_draw_char(205, 1, x, y);
             } else {
 
-                if (show_z) {
-                    root_draw_char('0' + win_zindex[x + y * canvasCharWidth], x, y);
+                if (show_z_buf) {
+                    root_draw_char(win_zindex[x + y * canvasCharWidth], 0, x, y);
                     continue;
                 }
 
@@ -256,7 +260,7 @@ pub fn redraw_screen_region(rx: isize, ry: isize, rw: isize, rh: isize, update_c
                     const curx = x - @as(usize, @bitCast(win.position_x));
                     const cury = y - @as(usize, @bitCast(win.position_y));
                     const char = fb.char[curx + cury * win.charWidth].value;
-                    root_draw_char(char, x, y);
+                    root_draw_char(char, 1, x, y);
 
                 } else {
 
@@ -319,10 +323,10 @@ pub fn redraw_cursor() void {
     cursor.old_pos_x = cursor.pos_x;
     cursor.old_pos_y = cursor.pos_y;
 }
-fn root_draw_char(c: u8, posX: usize, posY: usize) void {
+fn root_draw_char(c: u8, font: usize, posX: usize, posY: usize) void {
     st.push(@src()); defer st.pop();
 
-    const base_char = assets.fonts[1][(16 + c * system_font_height * 2)..];
+    const base_char = assets.fonts[font][(16 + c * system_font_height * 2)..];
 
     const rpx = posX * system_font_width;
     const rpy = posY * system_font_height;
