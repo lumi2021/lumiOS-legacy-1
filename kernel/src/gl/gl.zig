@@ -10,9 +10,8 @@ pub var canvasPixelHeight: usize = 0;
 pub var canvasCharWidth: usize = 0;
 pub var canvasCharHeight: usize = 0;
 
-var system_font: Font = undefined;
-var system_font_width: usize = undefined;
-var system_font_height: usize = undefined;
+const system_font_width: usize = 10;
+const system_font_height: usize = 16;
 
 pub var ready = false;
 
@@ -35,11 +34,6 @@ var cursor_texture: []Pixel = undefined;
 
 pub fn init(fb: bootInfo.FrameBuffer) void {
     st.push(@src()); defer st.pop();
-
-    system_font = assets.fonts[2];
-    system_font.scale = 1;
-    system_font_width = (system_font.width + 1) * system_font.scale + 1;
-    system_font_height = (system_font.height + 1) * system_font.scale;
 
     const fb_ptr: [*]Pixel = @ptrCast(@alignCast(fb.framebuffer));
     root_framebuffer = fb_ptr[0..(fb.size / 4)];
@@ -77,10 +71,6 @@ pub fn init(fb: bootInfo.FrameBuffer) void {
     , .{ root_framebuffer.len, os.memory.paddr_from_vaddr(@intFromPtr(root_framebuffer.ptr)), canvasPPS, canvasBPP, canvasPixelWidth, canvasCharWidth, canvasPixelHeight, canvasCharHeight });
 
     ready = true;
-}
-
-pub inline fn get_system_font() Font {
-    return system_font;
 }
 
 // user side
@@ -332,31 +322,18 @@ pub fn redraw_cursor() void {
 fn root_draw_char(c: u8, posX: usize, posY: usize) void {
     st.push(@src()); defer st.pop();
 
-    const base_char = system_font.data[(c * system_font.height)..];
+    const base_char = assets.fonts[1][(16 + c * system_font_height * 2)..];
 
     const rpx = posX * system_font_width;
     const rpy = posY * system_font_height;
 
-    for (0 .. system_font.height) |y| {
-        const line = base_char[y];
-        for (0 .. (system_font.width + 1)) |x| {
+    for (0 .. system_font_height) |y| {
+        const line = std.mem.readInt(u16, base_char[y*2..][0..2], .big);
+        for (0 .. system_font_width) |x| {
 
-            for (0 .. system_font.scale) |x2| {
-                for (0 .. system_font.scale) |y2| {
-
-                    const has_col = (std.math.shr(u8, line, 8 - x) & 0x1) == 1;
-                    const col: Pixel = if (has_col) .rgb(255, 255, 255) else .rgb(0, 0, 0);
-
-                    const offx = x * system_font.scale + x2;
-                    const offy = y * system_font.scale + y2;
-
-                    root_framebuffer[(rpx + offx) + (rpy + offy) * canvasPPS] = col;
-                    root_framebuffer[(rpx + offx + 1) + (rpy + offy) * canvasPPS] = col;
-                    root_framebuffer[(rpx + offx) + (rpy + offy + 1) * canvasPPS] = col;
-                    root_framebuffer[(rpx + offx + 1) + (rpy + offy + 1) * canvasPPS] = col;
-
-                }
-            }
+            const has_col = (std.math.shr(u16, line, 16 - x) & 0x1) == 1;
+            const col: Pixel = if (has_col) .rgb(255, 255, 255) else .rgb(0, 0, 0);
+            root_framebuffer[(rpx + x) + (rpy + y) * canvasPPS] = col;
 
         }
     }
@@ -367,8 +344,6 @@ const std = @import("std");
 const os = @import("root").os;
 const bootInfo = @import("../boot/boot_info.zig");
 const Allocator = std.mem.Allocator;
-
-pub const text = @import("text/text.zig");
 
 pub const Pixel = packed struct(u32) {
     blue: u8,
@@ -399,7 +374,6 @@ pub const Char = packed struct(u16) {
         blue,
     };
 };
-pub const Font = text.Font;
 
 pub const VideoMode = enum { text, graph };
 pub const VideoContext = struct {

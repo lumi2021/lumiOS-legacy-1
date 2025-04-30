@@ -19,10 +19,13 @@ pub fn init(_: ?*anyopaque) callconv(.C) isize {
     print.log("# Initializing drivers...", .{});
     _ = osstd.process.create_task("eve", init_all_drivers_sync, null);
 
-    print.log("# Initializing Window manager...\n", .{});
-    _ = osstd.process.create_task("winman", sysprocs.winman.init, null);
+    //print.log("# Initializing Window manager...\n", .{});
+    //_ = osstd.process.create_task("winman", sysprocs.winman.init, null);
 
     print.log("Adam initialization routine complete.\n", .{});
+    print.log("Creating a terminal instance...\n", .{});
+
+    _ = osstd.process.create_task("console", sysprocs.console.init, null);
 
     while (true) {}
 }

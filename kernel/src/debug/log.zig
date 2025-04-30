@@ -87,7 +87,7 @@ pub fn create_history() !void {
     history = String.init(os.memory.allocator);
     history_enabled = true;
 
-    debug_win = gl.create_window(.text, gl.canvasCharWidth - 16, gl.canvasCharHeight - 8, false);
+    debug_win = gl.create_window(.text, (gl.canvasCharWidth / 2) - 8, gl.canvasCharHeight - 8, false);
     gl.move_window(debug_win, 8, 4);
     gl.focus_window(debug_win);
 }

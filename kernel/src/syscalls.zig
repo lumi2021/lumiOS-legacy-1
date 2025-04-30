@@ -16,37 +16,41 @@ const TaskContext = os.theading.TaskContext;
 const SyscallVector = *const fn (*TaskContext, usize, usize, usize, usize) SyscallReturn;
 const SyscallReturn = anyerror!usize;
 
-var syscalls: [255]SyscallVector = undefined;
+var syscalls: [0xf][255]SyscallVector = undefined;
 
 pub fn init() !void {
     st.push(@src()); defer st.pop();
 
-    inline for (0..255) |i| syscalls[i] = unhandled_syscall;
+    for (0..0xf) |i| { 
+        inline for (0..255) |j| syscalls[i][j] = unhandled_syscall;
+    }
 
-    syscalls[0x0_00] = suicide;
-    syscalls[0x0_01] = print_stdout;
+    syscalls[0][0] = suicide;
+    syscalls[0][1] = print_stdout;
 
-    //syscalls[0x1_00] = mem_map;
-    //syscalls[0x1_02] = mem_remap;
-    //syscalls[0x1_03] = mem_free;
+    //syscalls[1][0] = mem_map;
+    //syscalls[1][2] = mem_remap;
+    //syscalls[1][3] = mem_free;
 
-    syscalls[0x2_00] = open_file_descriptor;
-    syscalls[0x2_01] = close_file_descriptor;
-    syscalls[0x2_02] = write;
-    syscalls[0x2_03] = read;
+    syscalls[2][0] = open_file_descriptor;
+    syscalls[2][1] = close_file_descriptor;
+    syscalls[2][2] = write;
+    syscalls[2][3] = read;
 
-    syscalls[0x3_00] = branch_subprocess;
+    syscalls[3][0] = branch_subprocess;
 
     idtm.interrupts[0x80] = syscall_interrupt;
 }
 
 pub fn syscall_interrupt(context: *TaskContext) void {
-    st.push(@src());
-    defer st.pop();
+    st.push(@src()); defer st.pop();
 
-    print.dbg("System call 0x{X} requested!", .{context.rax});
+    const group = context.rax >> 8;
+    const call = context.rax & 0xff;
 
-    const res = syscalls[context.rax](context, context.rdi, context.rsi, context.rdx, context.r10) catch |err| {
+    print.dbg("System call 0x{X} of the group {X} requested!", .{group, call});
+
+    const res = syscalls[group][call](context, context.rdi, context.rsi, context.rdx, context.r10) catch |err| {
         context.rbx = @intFromEnum(error_to_enum(err));
         return;
     };
@@ -78,11 +82,11 @@ fn unhandled_syscall(ctx: *TaskContext, _: usize, _: usize, _: usize, _: usize) 
     return 0;
 }
 
+// Misc
 fn suicide(_: *TaskContext, a: usize, _: usize, _: usize, _: usize) SyscallReturn {
     schedue.kill_current_process(@bitCast(a));
     return 0;
 }
-
 fn print_stdout(_: *TaskContext, message: usize, _: usize, _: usize, _: usize) SyscallReturn {
     const str_buf: [*:0]u8 = @ptrFromInt(message);
     const str: [:0]u8 = std.mem.span(str_buf);
