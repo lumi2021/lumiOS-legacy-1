@@ -36,8 +36,6 @@ pub fn logkey(scancode: u16) void {
 
     if (pressed) {
 
-        //print.raw("{s} ({X:0>4}) pressed!\r\n", .{@tagName(@as(Keys, @enumFromInt(keycode))), scancode});
-
         switch (keycode) {
             @intFromEnum(Keys.KEY_0) ... @intFromEnum(Keys.KEY_9)
                 => writer.writeByte(if (!shift) ('0' + keycode - @intFromEnum(Keys.KEY_0))
@@ -69,7 +67,6 @@ pub fn logkey(scancode: u16) void {
             else => return
         }
 
-        //print.raw("{s}\n", .{text.items});
     }
 }
 pub const num_symbols = [_]u8 {')', '!', '@', '#', '$', '%', '"', '&', '*', '('};
@@ -127,5 +124,3 @@ pub const Keys = enum {
     DOWN,
     RIGHT,
 };
-
-
