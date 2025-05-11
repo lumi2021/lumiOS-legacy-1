@@ -77,9 +77,7 @@ fn scan_gpt_table(driver: disk.DiskEntry) void {
         }
 
         // EFI Partition
-        else if (std.mem.eql(u8, &buf, "C12A7328-F81F-11D2-BA4B-00A0C93EC93B")) {
-            file_sys = format.EFISystem.detect_partition_fs(driver, i);
-        }
+        else if (std.mem.eql(u8, &buf, "C12A7328-F81F-11D2-BA4B-00A0C93EC93B")) file_sys = .vFAT;
 
         if (file_sys == .unitialized) {
             // Partition type not recognized
@@ -103,8 +101,8 @@ fn scan_gpt_table(driver: disk.DiskEntry) void {
         });
 
         switch (file_sys) {
-            .FAT12 => format.FAT12.analyze_partition(node),
-            //.FAT32 => format.FAT32.analyze_partition(node),
+            .vFAT => format.FAT.analyze_partition(node),
+
             else => |t| print.err("Partition type {s} not implemented!", .{@tagName(t)})
         }
 
@@ -125,17 +123,7 @@ pub const FileSystemData = union(FileSystem) {
 
     iso9660: void,
 
-    FAT12: struct {
-        fat_table_ptr: usize,
-        fat_table_len: usize,
-
-        root_dir_ptr: usize,
-        root_dir_len: usize,
-
-        data_start_ptr: usize
-    },
-    FAT16: void,
-    FAT32: void,
+    vFAT: format.FAT.FileSystem_FAT_Data,
 
     ext2: void,
     ext4: void,
@@ -182,7 +170,7 @@ pub const FileSystem = enum {
     unitialized,
 
     iso9660,
-    FAT12, FAT16, FAT32,
+    vFAT,
     ext2, ext4,
     HFS_plus,
 };

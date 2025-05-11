@@ -31,15 +31,15 @@ pub const debug_ignore: []const KeyValuePair = &[_]KeyValuePair{
 
     // file system
     .{ .key = "fs", .value = default },
-    .{ .key = "partitions", .value = ignore_all },
+    .{ .key = "partitions", .value = default },
 
     // Drivers related
     .{ .key = "drivers", .value = default },
     .{ .key = "PCI", .value = default },
-    .{ .key = "ps2", .value = ignore_all },
+    .{ .key = "ps2", .value = default },
 
     // Devices
-    .{ .key = "aHCI", .value = ignore_all },
+    .{ .key = "aHCI", .value = default },
     .{ .key = "xHCI", .value = default },
     .{ .key = "keyboard", .value = default },
     .{ .key = "mouse", .value = default },

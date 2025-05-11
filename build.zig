@@ -4,6 +4,11 @@ const Step = Build.Step;
 const Target = std.Target;
 const builtin = @import("builtin");
 
+// imageBuilder dependences references
+const imageBuilder = @import("deps/imageBuilder/image-builder/main.zig");
+const MiB = imageBuilder.size_constants.MiB;
+const GPTr = imageBuilder.size_constants.GPT_reserved_sectors;
+
 const kernel_package = @import("kernel");
 const apps_package = [_][]const u8 {
     "test_program"
@@ -13,23 +18,18 @@ pub fn build(b: *Build) void {
     b.exe_dir = "zig-out/";
 
     // bootloader
-    const install_bootloader_step = b.allocator.create(Step) catch unreachable;
-    install_bootloader_step.* = Step.init(.{
-        .id = .custom,
-        .name = "Install Bootloader",
-        .owner = b
-    });
+    var install_bootloader_step = addDummyStep(b, "Install Bootloader");
     {
-    install_bootloader_step.dependOn(&b.addInstallFile(b.path("deps/boot/limine_bootloaderx64.EFI"),
-        ".disk/EFI/BOOT/BOOTX64.EFI").step);
-    install_bootloader_step.dependOn(&b.addInstallFile(b.path("deps/boot/limine_config.txt"),
-        ".disk/boot/limine/limine.conf").step);
-    install_bootloader_step.dependOn(&b.addInstallFile(b.path("deps/boot/limine-uefi-cd.bin"),
-        ".disk/boot/limine/limine-uefi-cd.bin").step);
-    install_bootloader_step.dependOn(&b.addInstallFile(b.path("deps/boot/limine-bios-cd.bin"),
-        ".disk/boot/limine/limine-bios-cd.bin").step);
-    install_bootloader_step.dependOn(&b.addInstallFile(b.path("deps/boot/limine-bios.sys"),
-        ".disk/boot/limine/limine-bios.sys").step);
+        install_bootloader_step.dependOn(&b.addInstallFile(b.path("deps/boot/limine_bootloaderx64.EFI"),
+            ".disk/EFI/BOOT/BOOTX64.EFI").step);
+        install_bootloader_step.dependOn(&b.addInstallFile(b.path("deps/boot/limine_config.txt"),
+            ".disk/boot/limine/limine.conf").step);
+        //install_bootloader_step.dependOn(&b.addInstallFile(b.path("deps/boot/limine-uefi-cd.bin"),
+        //    ".disk/boot/limine/limine-uefi-cd.bin").step);
+        //install_bootloader_step.dependOn(&b.addInstallFile(b.path("deps/boot/limine-bios-cd.bin"),
+        //    ".disk/boot/limine/limine-bios-cd.bin").step);
+        install_bootloader_step.dependOn(&b.addInstallFile(b.path("deps/boot/limine-bios.sys"),
+            ".disk/boot/limine/limine-bios.sys").step);
     }
 
     // kernel
@@ -39,49 +39,35 @@ pub fn build(b: *Build) void {
 
     // random files for dbg
     var buf: [18]u8 = undefined;
-    for (0 .. 20) |i| {
+    for (0 .. 5) |i| {
         const a = b.addInstallFile(b.path(".zigversion"),
         std.fmt.bufPrint(&buf, ".disk/FILE{:0>4}.TXT", .{i}) catch unreachable);
         install_kernel_step.step.dependOn(&a.step);
     }
 
+    // generate disk image
+    var disk = imageBuilder.addBuildGPTDiskImage(b, 20*MiB + GPTr, "lumiOS.img");
+    disk.addPartition(.vFAT, "Main", "zig-out/.disk", 15*MiB);
+
+    disk.step.dependOn(install_bootloader_step);
+    disk.step.dependOn(&install_kernel_step.step);
+
     // cmd commands
-    const geneate_img_cmd = b.addSystemCommand(&.{
-        "xorriso",
-        "-as", "mkisofs",
-
-        "-b", "boot/limine/limine-bios-cd.bin",
-        
-        "-no-emul-boot",
-        "-boot-load-size", "4",
-        "-boot-info-table",
-        "-apm-block-size", "2048",
-
-        "--efi-boot", "boot/limine/limine-uefi-cd.bin",
-
-        "-V", "lumiOS",
-        "-efi-boot-part",
-        "--efi-boot-image",
-        "--protective-msdos-label",
-
-        "zig-out/.disk/",
-        "-o", "zig-out/lumiOS.iso",
-    });
     const limine_bios_install = b.addSystemCommand(&.{
         "deps/boot/" ++ (if (builtin.os.tag == .windows) "limine.exe" else "limine"),
         "bios-install",
-        "zig-out/lumiOS.iso"
+        "zig-out/lumiOS.img"
     });
-    
     const run_qemu = b.addSystemCommand(&.{
         "qemu-system-x86_64",
         
         "-M", "q35",
-        //"-bios", "deps/debug/OVMF.fd", // for UEFI emulation (not recommended)
+        "-bios", "deps/debug/OVMF.fd", // for UEFI emulation (not recommended)
         "-m", "512M",
+        "-vga", "virtio",
 
         "-accel",
-        if (builtin.os.tag == .linux)"kvm"
+        if (builtin.os.tag == .linux) "kvm"
         else "whpx",
 
         // serial, video, etc
@@ -106,14 +92,11 @@ pub fn build(b: *Build) void {
         //"-trace", "*xhci*",
 
         // Disk
-        "-drive", "id=drive0,file=zig-out/lumiOS.iso,format=raw,if=none",
+        "-drive", "id=drive0,file=zig-out/lumiOS.img,format=raw,if=none",
     });
-    //const run_bochs = b.addSystemCommand(&.{"bochs", "-f", "bochsrc.txt"});
 
-    geneate_img_cmd.step.dependOn(install_bootloader_step);
-    geneate_img_cmd.step.dependOn(&install_kernel_step.step);
+    limine_bios_install.step.dependOn(&disk.step);
 
-    limine_bios_install.step.dependOn(&geneate_img_cmd.step);
     // default (only build)
     b.getInstallStep().dependOn(&limine_bios_install.step);
 
@@ -122,4 +105,14 @@ pub fn build(b: *Build) void {
     // build and run
     const run_step = b.step("run", "Run the OS in qemu");
     run_step.dependOn(&run_qemu.step);
+}
+
+fn addDummyStep(b: *Build, name: []const u8) *Step {
+    const step = b.allocator.create(Step) catch unreachable;
+    step.* = Step.init(.{
+        .id = .custom,
+        .name = name,
+        .owner = b
+    });
+    return step;
 }

@@ -23,9 +23,9 @@ pub fn init(_: ?*anyopaque) callconv(.C) isize {
     //_ = osstd.process.create_task("winman", sysprocs.winman.init, null);
 
     print.log("Adam initialization routine complete.\n", .{});
-    print.log("Creating a terminal instance...\n", .{});
+    //print.log("Creating a terminal instance...\n", .{});
 
-    _ = osstd.process.create_task("console", sysprocs.console.init, null);
+    //_ = osstd.process.create_task("console", sysprocs.console.init, null);
 
     while (true) {}
 }
@@ -37,6 +37,7 @@ pub fn init_all_drivers_sync(_: ?*anyopaque) callconv(.C) isize {
     os.drivers.init_all_drivers() catch |err| @panic(@errorName(err));
     return 0;
 }
+
 
 pub fn shutdown() noreturn {
     os.port_io.outw(0x0604, 0x2000);

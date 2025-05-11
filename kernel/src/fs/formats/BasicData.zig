@@ -21,8 +21,6 @@ pub fn detect_partition_fs(driver: disk.DiskEntry, entry: GPTEntry) FileSystem {
 
     if (std.mem.eql(u8, sector[0x1 .. 0x6], "CD001")) {
         return .iso9660;
-    } else if (std.mem.eql(u8, sector[0x36 .. 0x3C], "FAT12")) {
-        return .FAT16;
     }
     
     return .unitialized;

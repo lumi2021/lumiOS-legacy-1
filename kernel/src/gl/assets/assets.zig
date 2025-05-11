@@ -3,7 +3,7 @@ const gl = @import("../gl.zig");
 pub const fonts = [_][]const u8 {
     @embedFile("fonts/bitfont.bf"),
     @embedFile("fonts/monofont.bf"),
-    @embedFile("fonts/guifont.bf"),
+    //@embedFile("fonts/leickhable-monocle-16x24.bf"),
 };
 
 pub const wallpapers = [_][]const u8 {

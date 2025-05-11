@@ -115,20 +115,18 @@ fn update_debug_info() void {
     };
 
     // title
-    fb[0] = .char('D');
-    fb[1] = .char('E');
-    fb[2] = .char('B');
-    fb[3] = .char('U');
-    fb[4] = .char('G');
+    fb[0] = .char('J');
+    fb[1] = .char('o');
+    fb[2] = .char('u');
+    fb[3] = .char('r');
+    fb[4] = .char('n');
+    fb[5] = .char('a');
+    fb[6] = .char('l');
+    fb[7] = .char(':');
 
-    fb[6] = .char('L');
-    fb[7] = .char('O');
-    fb[8] = .char('G');
-    fb[9] = .char(':');
+    for (0..framebuffer_data.width) |i| fb[i + framebuffer_data.width] = .char(196);
 
-    for (0..framebuffer_data.width) |x| fb[x + framebuffer_data.width] = .char(196);
-
-    const sidx = getStartIndex(history.items, framebuffer_data.height - 2);
+    const sidx = getStartIndex(history.items, framebuffer_data.height - 3);
     const str = history.items[sidx..];
 
     var x: usize = 0;
@@ -145,6 +143,9 @@ fn update_debug_info() void {
             x += 1;
         }
     }
+
+    for (0..framebuffer_data.width) |i| fb[i + framebuffer_data.width * (framebuffer_data.height - 2)] = .char(196);
+    fb[0 + framebuffer_data.width * (framebuffer_data.height - 1)] = .char('>');
 
     gl.swap_buffer(debug_win);
 }
