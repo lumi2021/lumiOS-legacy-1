@@ -1,0 +1,3 @@
+[submodule "deps/imageBuilder"]
+	path = deps/imageBuilder
+	url = git@github.com:lumi2021/imageBuilder.git
