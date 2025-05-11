@@ -238,7 +238,7 @@ pub fn solve_path(path: []const u8) OpenPathError!*FsNode {
         // variables
         if (step[0] == '$') {
 
-            if (std.mem.eql(u8, step[1..], "THREAD_ID")) {
+            if (std.mem.eql(u8, step[1..], "TASK_ID")) {
                 var str: [16]u8 = undefined;
                 step = std.fmt.bufPrint(&str, "{X:0>5}", .{schedue.current_task.?.id}) catch unreachable;
             }
@@ -271,7 +271,7 @@ pub fn solve_path(path: []const u8) OpenPathError!*FsNode {
 fn get_tree_root(token: []const u8) OpenPathError!*FsNode {
     st.push(@src()); defer st.pop();
 
-    if (token.len <= 2 or token[token.len - 1] != ':') return error.invalidPath;
+    if (token.len < 2 or token[token.len - 1] != ':') return error.invalidPath;
 
     if (token.len == 2 and fileTree.drives['A' - token[0]] != null) return fileTree.drives['A' - token[0]].?;
     if (token.len == 4 and std.mem.eql(u8, token, "sys:")) return fileTree.sys

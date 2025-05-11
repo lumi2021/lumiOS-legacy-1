@@ -4,6 +4,8 @@ const fmt = std.fmt;
 const uart = os.uart;
 const gl = os.gl;
 
+const kbd_state = os.drivers.devices.keyboard.state;
+
 const puts = uart.uart_puts;
 const printf = uart.uart_printf;
 const st = os.stack_tracer;
@@ -87,7 +89,7 @@ pub fn create_history() !void {
     history = String.init(os.memory.allocator);
     history_enabled = true;
 
-    debug_win = gl.create_window(.text, (gl.canvasCharWidth / 2) - 8, gl.canvasCharHeight - 8, false);
+    debug_win = gl.create_window(.text, gl.canvasCharWidth - 16, gl.canvasCharHeight - 8, false);
     gl.move_window(debug_win, 8, 4);
     gl.focus_window(debug_win);
 }
@@ -99,11 +101,15 @@ pub fn add_to_history(str: []const u8) void {
 
     _ = history.writer().write(str) catch unreachable;
 
-    update_debug_info();
+    update_window();
     history_enabled = true;
 }
+pub fn clear_history() void {
+    history.clearRetainingCapacity();
+}
 
-fn update_debug_info() void {
+
+pub fn update_window() void {
     st.push(@src()); defer st.pop();
 
     const framebuffer_data = gl.get_buffer_info(debug_win);
@@ -126,7 +132,7 @@ fn update_debug_info() void {
 
     for (0..framebuffer_data.width) |i| fb[i + framebuffer_data.width] = .char(196);
 
-    const sidx = getStartIndex(history.items, framebuffer_data.height - 3);
+    const sidx = getStartIndex(history.items, framebuffer_data.height - 4);
     const str = history.items[sidx..];
 
     var x: usize = 0;
@@ -145,7 +151,16 @@ fn update_debug_info() void {
     }
 
     for (0..framebuffer_data.width) |i| fb[i + framebuffer_data.width * (framebuffer_data.height - 2)] = .char(196);
-    fb[0 + framebuffer_data.width * (framebuffer_data.height - 1)] = .char('>');
+    fb[0 + framebuffer_data.width * (framebuffer_data.height - 1)] = .char('@');
+    fb[2 + framebuffer_data.width * (framebuffer_data.height - 1)] = .char('a');
+    fb[3 + framebuffer_data.width * (framebuffer_data.height - 1)] = .char('d');
+    fb[4 + framebuffer_data.width * (framebuffer_data.height - 1)] = .char('a');
+    fb[5 + framebuffer_data.width * (framebuffer_data.height - 1)] = .char('m');
+    fb[7 + framebuffer_data.width * (framebuffer_data.height - 1)] = .char('>');
+
+    for (kbd_state.text.items, 0..) |char, idx| {
+        fb[9 + idx + framebuffer_data.width * (framebuffer_data.height - 1)] = .char(char);
+    }
 
     gl.swap_buffer(debug_win);
 }

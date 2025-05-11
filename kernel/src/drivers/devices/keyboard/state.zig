@@ -5,7 +5,7 @@ const print = os.console_write("keyboard_state");
 const layout = @embedFile("layouts/pt-br_ABNT2.kbd");
 
 const String = std.ArrayList(u8);
-var text: String = undefined; 
+pub var text: String = undefined; 
 
 var shift: bool = false;
 var capitalize: bool = false;
@@ -46,28 +46,36 @@ pub fn logkey(scancode: u16) void {
                 + keycode - @intFromEnum(Keys.KEY_A)) catch unreachable,
 
             @intFromEnum(Keys.SPACE) => writer.writeByte(' ') catch unreachable,
-            @intFromEnum(Keys.ENTER) => writer.writeByte('\n') catch unreachable,
             @intFromEnum(Keys.BACKSPACE) => _ = text.pop(),
 
             @intFromEnum(Keys.COMMA) => writer.writeByte(',') catch unreachable,
             @intFromEnum(Keys.DOT) => writer.writeByte('.') catch unreachable,
 
+            // br-abnt2 only
+            @intFromEnum(Keys.OEM_2) => writer.writeByte(':') catch unreachable,
+            @intFromEnum(Keys.ABNT_C) => writer.writeByte('/') catch unreachable,
+
             @intFromEnum(Keys.CAPSLOCK) => capitalize = !capitalize,
 
-            @intFromEnum(Keys.F1) => {
-                print.raw("{s}", .{text.items});
+            // invoke shell and clear buffer
+            @intFromEnum(Keys.ENTER) => {
+                const value = std.mem.trim(u8, text.items, " ");
+                if (value.len != 0) os.shell.execute(value);
                 text.clearAndFree();
             },
-            @intFromEnum(Keys.F2) => os.fs.lsrecursive(),
-            @intFromEnum(Keys.F3) => os.gl.toggle_z_buffer(),
+
+            @intFromEnum(Keys.F1) => os.fs.lsrecursive(),
+            @intFromEnum(Keys.F2) => os.gl.toggle_z_buffer(),
 
             @intFromEnum(Keys.F11) => @import("../../../sysprocs/adam/adam.zig").reboot(),
             @intFromEnum(Keys.F12) => @import("../../../sysprocs/adam/adam.zig").shutdown(),
 
-            else => return
+            else => print.warn("not handled keycode {s}", .{ @tagName(@as(Keys, @enumFromInt(keycode))) })
         }
 
     }
+
+    os.debug_log.update_window();
 }
 pub const num_symbols = [_]u8 {')', '!', '@', '#', '$', '%', '"', '&', '*', '('};
 pub const Keys = enum {

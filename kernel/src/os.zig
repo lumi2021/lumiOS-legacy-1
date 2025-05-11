@@ -17,6 +17,8 @@ pub const drivers = @import("drivers/drivers.zig");
 
 pub const syscalls = @import("syscalls.zig");
 
+pub const shell = @import("shell/shell.zig");
+
 pub const stack_tracer = @import("debug/stack_trace.zig");
 pub const config = @import("config.zig");
 
