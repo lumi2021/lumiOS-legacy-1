@@ -11,6 +11,7 @@ It does uhhh... kernel things.
 [`gl`](gl/)
 [`io`](io/)
 [`memory`](memory/)
+[`shell`](shell/)
 [`sysprocs`](sysprocs/)
 [`system`](system/)
 [`theading`](theading/)

@@ -111,7 +111,7 @@ pub fn get_first_free_tid() usize {
 }
 
 
-pub fn lsproc() void {
+pub fn lstask() void {
     write.raw("{} active tasks\n", .{task_count});
     for (task_list) |i| if (i) |task| {
         write.raw("- {: <5} {s: <20} {s}\n", .{task.id, task.name, @tagName(task.state)});

@@ -28,8 +28,8 @@ pub fn execute(input: []const u8) void {
             const path = iterator.next() orelse "";
             os.fs.ls(path);
         }
-        else if (std.mem.eql(u8, command, "lsproc")) {
-            os.theading.taskManager.lsproc();
+        else if (std.mem.eql(u8, command, "lstask")) {
+            os.theading.taskManager.lstask();
         }
 
         else print.raw("\x1b[31;40mNo command, alias or program \'{s}\' found!\x1b[0m\n", .{command});
