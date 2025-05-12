@@ -47,7 +47,7 @@ pub fn build(b: *Build) void {
 
     // generate disk image
     var disk = imageBuilder.addBuildGPTDiskImage(b, 20*MiB + GPTr, "lumiOS.img");
-    disk.addPartition(.vFAT, "Main", "zig-out/.disk", 15*MiB);
+    disk.addPartition(.vFAT, "main", "zig-out/.disk", 15*MiB);
 
     disk.step.dependOn(install_bootloader_step);
     disk.step.dependOn(&install_kernel_step.step);

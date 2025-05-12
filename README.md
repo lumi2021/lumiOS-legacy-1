@@ -16,15 +16,17 @@ windows 11 2.
 - [x] System Calls;
 - [x] Multitheading;
 - [x] Pipes (WIP);
+- [ ] Executing programs from memory;
 - [x] Processes that runs at ring 0;
 - [ ] Processes that runs at user space;
-- [ ] Posix compatibility
+- [ ] Linux programs compatibility
 
 **File System:**
-- [x] A simple file system (WIP);
+- [x] File system tree;
 - [x] SATA Devices support (WIP);
-- [x] FAT system (WIP);
-- [ ] ext4 system;
+- [ ] NVMe Devices support;
+- [x] vFAT file system;
+- [ ] ext4 system
 
 **Device support:**
 - [x] PS/2 Mouse support (WIP);
@@ -36,6 +38,8 @@ windows 11 2.
 - [ ] Basic Audio Card support
 
 **Useability:**
+- [x] Shell;
+- [x] Terminal;
 - [x] Graphics (WIP);
 - [x] Simple desktop (WIP);
 - [x] Mouse Cursor (WIP);
@@ -57,3 +61,4 @@ From oldest to newest:
 ![boobes](.github/assets/demo_1.png)
 ![window](.github/assets/demo_2.png)
 ![filesy](.github/assets/demo_3.png)
+![filesy](.github/assets/demo_4.png)

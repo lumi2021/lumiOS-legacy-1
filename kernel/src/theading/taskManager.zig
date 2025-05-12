@@ -12,10 +12,7 @@ const st = os.stack_tracer;
 const TaskItem = ?*Task;
 var task_list: []TaskItem = undefined;
 
-var thead_count: usize = 0;
-pub fn getTheadCount() usize {
-    return thead_count;
-}
+var task_count: usize = 0;
 
 var allocator: std.mem.Allocator = undefined;
 
@@ -56,7 +53,7 @@ pub fn run_process(taskName: [:0]const u8, entry: ProcessEntryFunction, args: ?*
 
     task.id = tid;
     task_list[tid] = task;
-    thead_count += 1;
+    task_count += 1;
     
     // create task virtual directory
     var buf: [128]u8 = undefined;
@@ -78,7 +75,7 @@ pub fn kill_process(tid: usize) void {
 
     const curr = getTask(tid) orelse return;
     task_list[tid] = null;
-    thead_count -= 1;
+    task_count -= 1;
 
     curr.destry();
     curr.taskAllocator.deinit();
@@ -96,7 +93,7 @@ pub inline fn getTask(tid: usize) TaskItem {
 }
 
 pub inline fn activeTaskCount() usize {
-    return thead_count;
+    return task_count;
 }
 pub inline fn taskList_len() usize {
     return task_list.len;
@@ -111,4 +108,12 @@ pub fn get_first_free_tid() usize {
 
     // TODO increase thead list length
     unreachable;
+}
+
+
+pub fn lsproc() void {
+    write.raw("{} active tasks\n", .{task_count});
+    for (task_list) |i| if (i) |task| {
+        write.raw("- {: <5} {s: <20} {s}\n", .{task.id, task.name, @tagName(task.state)});
+    };
 }

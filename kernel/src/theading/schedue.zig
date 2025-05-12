@@ -66,7 +66,7 @@ pub fn do_schedue(currContext: *TaskContext) void {
 
     write.dbg("Scheduing...", .{});
 
-    if (task_manager.getTheadCount() == 0) {
+    if (task_manager.activeTaskCount() == 0) {
         no_task_in_queue(currContext);
         return;
     } //else if (task_manager.getTheadCount() == 1 and current_task != null) return;

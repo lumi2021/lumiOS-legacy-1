@@ -107,7 +107,7 @@ pub fn create_window(mode: VideoMode, width: usize, height: usize, hasborder: bo
         const buf = allocator.alloc(Char, nw.charWidth * nw.charHeight * 2) catch unreachable;
         nw.buffer_0.char = (buf[0..]).ptr;
         nw.buffer_1.char = (buf[nw.charWidth * nw.charHeight..]).ptr;
-        @memset(buf, Char{ .color = .{ .byte = 0b0000_0001 }, .value = ' ' });
+        @memset(buf, Char.charcol(' ', .white, .black));
     } else {
         const buf = allocator.alloc(Pixel, nw.pixelWidth * nw.pixelHeight * 2) catch unreachable;
         nw.buffer_0.pixel = (buf[0..]).ptr;
@@ -243,13 +243,17 @@ pub fn redraw_screen_region(rx: isize, ry: isize, rw: isize, rh: isize, update_c
                 const right = win.position_x + @as(isize, @bitCast(win.charWidth));
                 const bottom = win.position_y + @as(isize, @bitCast(win.charHeight));
 
-                if (x < win.position_x) root_draw_char(if (y < win.position_y) 201 else if (y >= bottom) 200 else 186, 1, x, y)
-                else if (x >= right) root_draw_char(if (y < win.position_y) 187 else if (y >= bottom) 188 else 186, 1, x, y)
-                else root_draw_char(205, 1, x, y);
+                if (x < win.position_x) root_draw_char(
+                    Char.charcol(if (y < win.position_y) 201 else if (y >= bottom) 200 else 186, .black, .white), 1, x, y)
+                else if (x >= right) root_draw_char(
+                    Char.charcol(if (y < win.position_y) 187 else if (y >= bottom) 188 else 186, .black, .white), 1, x, y)
+                else root_draw_char(Char.charcol(205, .black, .white), 1, x, y);
+
             } else {
 
                 if (show_z_buf) {
-                    root_draw_char(win_zindex[x + y * canvasCharWidth], 0, x, y);
+                    const idx = win_zindex[x + y * canvasCharWidth];
+                    root_draw_char(.{ .color = @bitCast(idx), .value = idx }, 0, x, y);
                     continue;
                 }
 
@@ -259,7 +263,7 @@ pub fn redraw_screen_region(rx: isize, ry: isize, rw: isize, rh: isize, update_c
 
                     const curx = x - @as(usize, @bitCast(win.position_x));
                     const cury = y - @as(usize, @bitCast(win.position_y));
-                    const char = fb.char[curx + cury * win.charWidth].value;
+                    const char = fb.char[curx + cury * win.charWidth];
                     root_draw_char(char, 1, x, y);
 
                 } else {
@@ -323,10 +327,14 @@ pub fn redraw_cursor() void {
     cursor.old_pos_x = cursor.pos_x;
     cursor.old_pos_y = cursor.pos_y;
 }
-fn root_draw_char(c: u8, font: usize, posX: usize, posY: usize) void {
+fn root_draw_char(char: Char, font: usize, posX: usize, posY: usize) void {
     st.push(@src()); defer st.pop();
 
-    const base_char = assets.fonts[font][(16 + c * system_font_height * 2)..];
+    const pallete = 1;
+
+    const base_char = assets.fonts[font][(16 + char.value * system_font_height * 2)..];
+    const fg_color = assets.palletes[pallete][@intCast(@as(u8, @bitCast(char.color)) & 0xF)];
+    const bg_color = assets.palletes[pallete][@intCast((@as(u8, @bitCast(char.color)) >> 4) & 0xF)];
 
     const rpx = posX * system_font_width;
     const rpy = posY * system_font_height;
@@ -336,12 +344,15 @@ fn root_draw_char(c: u8, font: usize, posX: usize, posY: usize) void {
         for (0 .. system_font_width) |x| {
 
             const has_col = (std.math.shr(u16, line, 16 - x) & 0x1) == 1;
-            const col: Pixel = if (has_col) .rgb(255, 255, 255) else .rgb(0, 0, 0);
+            const col: Pixel = if (has_col) .rgb(fg_color[0], fg_color[1], fg_color[2])
+            else .rgb(bg_color[0], bg_color[1], bg_color[2]);
+
             root_framebuffer[(rpx + x) + (rpy + y) * canvasPPS] = col;
 
         }
     }
 }
+
 
 // _bruh_imports___________________________________________________________________
 const std = @import("std");
@@ -360,22 +371,35 @@ pub const Pixel = packed struct(u32) {
     }
 };
 pub const Char = packed struct(u16) {
-    color: packed union {
-        byte: u8,
-        col: packed struct(u8) { foreground: CharColor, background: CharColor },
-    },
+    color: packed struct(u8) { foreground: CharColor, background: CharColor },
     value: u8,
 
-    pub fn char(c: u8) @This() {
-        return .{ .color = .{ .col = .{ .foreground = .white, .background = .black } }, .value = c };
+    pub inline fn char(c: u8) @This() {
+        return .{ .color = .{ .foreground = .white, .background = .black }, .value = c };
+    }
+    pub inline fn charcol(c: u8, fg: CharColor, bg: CharColor) @This() {
+        return .{ .color = .{ .foreground = fg, .background = bg }, .value = c };
     }
 
     pub const CharColor = enum(u4) {
-        white = 0,
-        black = 1,
-        red,
-        green,
-        blue,
+        black = 0,
+        white = 15,
+
+        red = 1,
+        green = 2,
+        yellow = 3,
+        blue = 4,
+        magenta = 5,
+        cyan = 6,
+        dark_gray = 8,
+
+        bright_red = 9,
+        bright_green = 10,
+        bright_yellow = 11,
+        bright_blue = 12,
+        bright_magenta = 13,
+        bright_cyan = 14,
+        light_gray = 7,
     };
 };
 

@@ -54,9 +54,9 @@ pub fn init() !void {
 
 pub fn ls(path: []const u8) void {
     if (std.mem.eql(u8, path, "")) {
-        for (fileTree.drives) |i| { if (i) |e| write.raw("{s: <15}{s}\n", .{e.name, @tagName(e.kind())}); }
-        write.raw("sys:           virtual_directory\n", .{});
-        write.raw("dev:           virtual_directory\n", .{});
+        for (fileTree.drives) |i| { if (i) |e| write.raw("- {s: <15}{s}\n", .{e.name, @tagName(e.kind())}); }
+        write.raw("- sys:           virtual_directory\n", .{});
+        write.raw("- dev:           virtual_directory\n", .{});
         return;
     }
     lsnode(solve_path(path) catch |err| {
@@ -66,7 +66,7 @@ pub fn ls(path: []const u8) void {
 }
 pub fn lsnode(node: *FsNode) void {
     for (node.children.items) |e| {
-        write.raw("{s: <15}{s}\n", .{e.name, @tagName(e.kind())});
+        write.raw("- {s: <15}{s}\n", .{e.name, @tagName(e.kind())});
     }
 }
 pub fn lsrecursive() void {
