@@ -16,20 +16,20 @@ pub fn execute(input: []const u8) void {
             os.debug_log.clear_history();
         }
 
-        else if (std.mem.eql(u8, command, "reboot")) {
-            print.dbg("Rebooting", .{});
-            @import("../sysprocs/adam/adam.zig").reboot();
-        }
-        else if (std.mem.eql(u8, command, "shutdown")) {
-            @import("../sysprocs/adam/adam.zig").shutdown();
-        }
-
         else if (std.mem.eql(u8, command, "lsdir")) {
             const path = iterator.next() orelse "";
             os.fs.ls(path);
         }
         else if (std.mem.eql(u8, command, "lstask")) {
             os.theading.taskManager.lstask();
+        }
+
+        else if (std.mem.eql(u8, command, "reboot")) {
+            print.dbg("Rebooting", .{});
+            @import("../sysprocs/adam/adam.zig").reboot();
+        }
+        else if (std.mem.eql(u8, command, "shutdown")) {
+            @import("../sysprocs/adam/adam.zig").shutdown();
         }
 
         else print.raw("\x1b[31;40mNo command, alias or program \'{s}\' found!\x1b[0m\n", .{command});

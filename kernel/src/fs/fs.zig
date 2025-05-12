@@ -59,10 +59,21 @@ pub fn ls(path: []const u8) void {
         write.raw("- dev:           virtual_directory\n", .{});
         return;
     }
-    lsnode(solve_path(path) catch |err| {
+
+    const node = solve_path(path) catch |err| {
         write.err("error: {s}", .{@errorName(err)});
         return;
-    });
+    };
+
+    switch (node.kind()) {
+
+        .disk,
+        .partition,
+        .directory,
+        .virtual_directory => lsnode(node),
+
+        else => write.err("Not a directory or iterable node!", .{})
+    }
 }
 pub fn lsnode(node: *FsNode) void {
     for (node.children.items) |e| {
@@ -254,16 +265,16 @@ pub fn solve_path(path: []const u8) OpenPathError!*FsNode {
                     if (cur.kind() != .directory and cur.kind() != .virtual_directory)
                         return error.notADirectory;
                 },
-                .directory ,
-                .virtual_directory => cur = c,
                 
-                else => return c
+                .directory ,
+                .virtual_directory,
+                .disk,
+                .partition => cur = c,
+                
+                else => return if (iter.next() != null) error.pathNotFound else c
             }
         }
-        else {
-            write.warn("searching for: {s}", .{step});
-            return error.pathNotFound;
-        }
+        else return error.pathNotFound;
     }
 
     return cur;
