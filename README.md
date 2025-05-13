@@ -1,4 +1,6 @@
-# LUMI OS
+# LUMI OS - LEGACY - V1
+
+> ATTENTION! This is a old legacy version of lumiOS.
 
 x86_64 Kernel and Operating System.
 
