@@ -77,7 +77,12 @@ pub fn ls(path: []const u8) void {
 }
 pub fn lsnode(node: *FsNode) void {
     for (node.children.items) |e| {
-        write.raw("- {s: <15}{s}\n", .{e.name, @tagName(e.kind())});
+
+        switch (e.kind()) {
+            .file => write.raw("- {s: <15}{s: <15}{} B\n", .{e.name, @tagName(e.kind()), e.data.file.size}),
+
+            else => write.raw("- {s: <15}{s: <15}\n", .{e.name, @tagName(e.kind())})
+        }
     }
 }
 pub fn lsrecursive() void {

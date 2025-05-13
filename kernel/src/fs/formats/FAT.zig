@@ -182,7 +182,14 @@ fn parse_subdirectory(part_node: *fs.FsNode, parent_node: *fs.FsNode, offset: us
                 if (!entry.is_directory()) {
                     const str_name = long_name orelse std.fmt.bufPrint(&name_buf, "{s}.{s}",
                         .{entry.get_name(), entry.get_extension()}) catch unreachable;
-                    node = parent_node.branch(str_name, .{ .file = undefined });
+                    
+                    const start_cluster = entry.get_cluster().?;
+                    const size = std.mem.readInt(u32, buf[i * 32 + 28..][0..4], .little);
+
+                    node = parent_node.branch(str_name, .{ .file = .{
+                        .sector_start = data_start + start_cluster,
+                        .size = size
+                    } });
                 } else {
                     const str_name = long_name orelse entry.get_name();
                     node = parent_node.branch(str_name, .{ .directory = undefined });
@@ -310,6 +317,11 @@ const DirEntry = extern struct {
 
     pub fn get_extension(self: *const DirEntry) []const u8 {
         return std.mem.trim(u8, &self.extension, &[_]u8{' '});
+    }
+
+    pub fn get_cluster(self: *const DirEntry) ?u32 {
+        const val = @as(u32, @intCast(self.first_cluster_high)) << 16 | self.first_cluster_low;
+        return if (val < 2) null else val;
     }
 };
 

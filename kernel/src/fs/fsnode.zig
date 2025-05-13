@@ -94,14 +94,20 @@ pub const FsNode = struct {
 pub const FsNodeData = union(ResourceKind) {
     device: void,
     disk: disk.DiskEntry,
-    partition: part.DiskPartition,
 
-    file: void,
+    partition: part.DiskPartition,
+    file: FsNodeFile,
     directory: void,
+
     virtual_directory: void,
     symlink: FsNodeSymlink,
     pipe: FsNodePipe,
     sharedPipe: FsNodePipe,
+};
+
+pub const FsNodeFile = struct {
+    sector_start: usize,
+    size: usize
 };
 
 pub const FsNodePipe = struct {
